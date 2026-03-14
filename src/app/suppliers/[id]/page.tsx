@@ -18,7 +18,7 @@ import { ArrowRight, Store, Phone, MapPin, Loader2, ArrowUpRight, ArrowDownRight
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, sanitizeLikePattern } from "@/lib/utils";
 
 export default function SupplierProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -47,16 +47,19 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
       .eq('id', id)
       .single();
 
-    // We fetch transactions where details contain the supplier ID or name
-    // (A more robust schema would link supplier_id to transactions table directly)
-    const { data: transData } = await supabase
-      .from('transactions')
-      .select('*')
-      .ilike('details', `%${supplierData?.name}%`)
-      .order('created_at', { ascending: false });
+    if (supplierData) {
+      setSupplier(supplierData);
 
-    if (supplierData) setSupplier(supplierData);
-    if (transData) setTransactions(transData as any[]);
+      // We fetch transactions where details contain the supplier ID or name
+      // (A more robust schema would link supplier_id to transactions table directly)
+      const { data: transData } = await supabase
+        .from('transactions')
+        .select('*')
+        .ilike('details', `%${sanitizeLikePattern(supplierData.name)}%`)
+        .order('created_at', { ascending: false });
+
+      if (transData) setTransactions(transData as any[]);
+    }
     
     setLoading(false);
   }
