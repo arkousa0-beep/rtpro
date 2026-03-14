@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { validateBarcodes } from './barcode-utils';
 
 export const POSService = {
   async fetchItemByBarcode(barcode: string) {
@@ -21,8 +22,7 @@ export const POSService = {
   },
 
   async processSale(cart: { barcode: string }[], total: number, paymentMethod: string, customerId: string | null) {
-    const barcodeRegex = /^[A-Za-z0-9\-_]+$/;
-    const invalidBarcodes = cart.filter(item => !barcodeRegex.test(item.barcode));
+    const invalidBarcodes = validateBarcodes(cart.map(item => item.barcode));
 
     if (invalidBarcodes.length > 0) {
       throw new Error('Invalid barcode format detected');
