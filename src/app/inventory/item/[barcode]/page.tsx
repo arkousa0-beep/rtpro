@@ -27,17 +27,18 @@ export default function ItemDetailsPage() {
   async function fetchItemDetails() {
     setLoading(true);
 
-    const { data: itemData } = await supabase
-      .from("items")
-      .select("*, products(name, categories(name)), suppliers(name), customers(name)")
-      .eq("barcode", barcode)
-      .single();
-
-    const { data: historyData } = await supabase
-      .from("item_history")
-      .select("*")
-      .eq("item_barcode", barcode)
-      .order("created_at", { ascending: false });
+    const [{ data: itemData }, { data: historyData }] = await Promise.all([
+      supabase
+        .from('items')
+        .select('*, products(name, categories(name)), customers(name), suppliers(name)')
+        .eq('barcode', decodeURIComponent(barcode))
+        .single(),
+      supabase
+        .from('item_history')
+        .select('*')
+        .eq('item_barcode', decodeURIComponent(barcode))
+        .order('created_at', { ascending: false })
+    ]);
 
     if (itemData) setItem(itemData as any);
     if (historyData) setHistory(historyData);
