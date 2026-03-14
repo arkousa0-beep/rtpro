@@ -1,30 +1,25 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Supplier, Transaction } from "@/lib/database.types";
-import { Card, CardContent } from "@/components/ui/card";
+import { Transaction, Supplier } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { ArrowRight, Store, Phone, MapPin, Loader2, ArrowUpRight, ArrowDownRight, Wallet } from "lucide-react";
-import { motion } from "framer-motion";
+import { Loader2, ArrowRight, Wallet, Store, Phone, MapPin, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn, sanitizeLikePattern } from "@/lib/utils";
 
-export default function SupplierProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function SupplierProfilePage() {
+  const params = useParams();
+  const id = params.id as string;
+
   const [supplier, setSupplier] = useState<Supplier | null>(null);
-  // Re-using transaction table or items table to show history.
-  // For suppliers, transactions are usually logged via the pay_supplier_debt.
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,16 +42,7 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
       .eq('id', id)
       .single();
 
-    if (supplierData) {
-      setSupplier(supplierData);
 
-      // We fetch transactions where details contain the supplier ID or name
-      // (A more robust schema would link supplier_id to transactions table directly)
-      const { data: transData } = await supabase
-        .from('transactions')
-        .select('*')
-        .ilike('details', `%${sanitizeLikePattern(supplierData.name)}%`)
-        .order('created_at', { ascending: false });
 
       if (transData) setTransactions(transData as any[]);
     }
@@ -85,7 +71,7 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
       if (error) throw error;
       if (data && !data.success) throw new Error(data.message);
 
-      toast.success("تم تسجيل الدفعة للمورد بنجاح");
+      toast.success("تم تسجيل الدفعة بنجاح");
       setPaymentAmount("");
       setOpenPaymentDialog(false);
       fetchData(); // Refresh data
@@ -126,7 +112,7 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
         </Button>
         <div>
           <h2 className="text-2xl font-black text-white">ملف المورد</h2>
-          <p className="text-sm text-white/50">سجل المدفوعات والديون</p>
+          <p className="text-sm text-white/50">سجل المدفوعات والمديونيات</p>
         </div>
       </div>
 
@@ -148,7 +134,7 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
               </div>
 
               <div className="text-left bg-white/5 p-4 rounded-3xl border border-white/10 min-w-[140px]">
-                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">المستحقات المتبقية</p>
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">المديونية الحالية</p>
                 <p className={`text-2xl font-black ${Number(supplier.balance) > 0 ? 'text-orange-400' : 'text-emerald-400'}`}>
                   {Number(supplier.balance || 0).toLocaleString()} <span className="text-xs">ج.م</span>
                 </p>
@@ -159,12 +145,12 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
               <DialogTrigger render={
                 <Button className="w-full h-14 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-black text-lg shadow-xl shadow-amber-500/20 active:scale-95 transition-all">
                   <Wallet className="w-5 h-5 ml-2" />
-                  تسديد دفعة للمورد
+                  تسديد دفعة למورد
                 </Button>
               } />
               <DialogContent className="glass border-white/10 rounded-[2.5rem] p-8 max-w-md">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl font-black text-white text-center">تسديد من مستحقات المورد</DialogTitle>
+                  <DialogTitle className="text-2xl font-black text-white text-center">تسديد للمورد</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handlePayment} className="space-y-6 mt-4 text-right">
                   <div className="space-y-3">
@@ -191,7 +177,8 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
                       </SelectTrigger>
                       <SelectContent className="glass border-white/10 rounded-2xl">
                         <SelectItem value="Cash" className="text-right">كاش (نقد)</SelectItem>
-                        <SelectItem value="Card" className="text-right">فيزا (بطاقة)</SelectItem>
+                        <SelectItem value="Bank Transfer" className="text-right">تحويل بنكي</SelectItem>
+                        <SelectItem value="Check" className="text-right">شيك</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -208,11 +195,11 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <h3 className="text-xl font-black text-white mb-4 px-2">سجل المدفوعات</h3>
+        <h3 className="text-xl font-black text-white mb-4 px-2">المدفوعات السابقة</h3>
         <div className="space-y-3">
           {transactions.length === 0 ? (
             <div className="text-center py-10 glass rounded-[2rem] text-white/30 border border-white/5">
-              لا توجد مدفوعات مسجلة لهذا المورد
+              لا توجد دفعات سابقة لهذا المورد
             </div>
           ) : (
             transactions.map((t) => (
@@ -223,15 +210,17 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
                       <ArrowDownRight className="w-6 h-6" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-white text-md">سداد مورد</h4>
+                      <h4 className="font-bold text-white text-md">
+                        تسديد دفعة
+                      </h4>
                       <span className="text-xs text-white/30">{new Date(t.created_at).toLocaleString('ar-EG')}</span>
                     </div>
                   </div>
                   <div className="text-left">
-                    <p className="text-xl font-black text-emerald-400">
+                    <p className="text-xl font-black text-red-400">
                       -{Number(t.total).toLocaleString()}
                     </p>
-                    <p className="text-[10px] text-white/40 font-bold uppercase">{t.payment_method === 'Cash' ? 'كاش' : t.payment_method === 'Card' ? 'فيزا' : 'آجل'}</p>
+                    <p className="text-[10px] text-white/40 font-bold uppercase">{t.payment_method === 'Cash' ? 'كاش' : t.payment_method === 'Bank Transfer' ? 'تحويل' : 'شيك'}</p>
                   </div>
                 </CardContent>
               </Card>
