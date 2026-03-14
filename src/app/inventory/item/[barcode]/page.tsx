@@ -32,19 +32,19 @@ export default function ItemProfilePage({ params }: { params: Promise<{ barcode:
   async function fetchItemData() {
     setLoading(true);
     
-    // Fetch item details
-    const { data: itemData } = await supabase
-      .from('items')
-      .select('*, products(name, categories(name)), customers(name), suppliers(name)')
-      .eq('barcode', decodeURIComponent(barcode))
-      .single();
-
-    // Fetch item history
-    const { data: historyData } = await supabase
-      .from('item_history')
-      .select('*')
-      .eq('item_barcode', decodeURIComponent(barcode))
-      .order('created_at', { ascending: false });
+    // Fetch item details and history concurrently
+    const [{ data: itemData }, { data: historyData }] = await Promise.all([
+      supabase
+        .from('items')
+        .select('*, products(name, categories(name)), customers(name), suppliers(name)')
+        .eq('barcode', decodeURIComponent(barcode))
+        .single(),
+      supabase
+        .from('item_history')
+        .select('*')
+        .eq('item_barcode', decodeURIComponent(barcode))
+        .order('created_at', { ascending: false })
+    ]);
 
     if (itemData) setItem(itemData as any);
     if (historyData) setHistory(historyData);
