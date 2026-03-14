@@ -42,14 +42,16 @@ import { ProductList } from "@/components/management/ProductList";
 import { CategoryList } from "@/components/management/CategoryList";
 
 // Services
-import { customerService } from "@/lib/services/customerService";
-import { supplierService } from "@/lib/services/supplierService";
-import { productService } from "@/lib/services/productService";
+import { customerService, Customer } from "@/lib/services/customerService";
+import { supplierService, Supplier } from "@/lib/services/supplierService";
+import { productService, Product } from "@/lib/services/productService";
 import { categoryService, Category } from "@/lib/services/categoryService";
+
+type ManagementItem = Customer | Supplier | Product | Category;
 
 export default function MorePage() {
   const [activeTab, setActiveTab] = useState("customers");
-  const [data, setData] = useState<unknown[]>([]);
+  const [data, setData] = useState<ManagementItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
@@ -70,15 +72,16 @@ export default function MorePage() {
         setCategories(cats || []);
       }
 
-      let result: unknown[] = [];
-      if (activeTab === "customers") result = await customerService.getAll();
-      else if (activeTab === "suppliers") result = await supplierService.getAll();
-      else if (activeTab === "products") result = await productService.getAll();
-      else if (activeTab === "categories") result = await categoryService.getAll();
+      let result: ManagementItem[] = [];
+      if (activeTab === "customers") result = await customerService.getAll() as Customer[];
+      else if (activeTab === "suppliers") result = await supplierService.getAll() as Supplier[];
+      else if (activeTab === "products") result = await productService.getAll() as Product[];
+      else if (activeTab === "categories") result = await categoryService.getAll() as Category[];
       
       setData(result || []);
-    } catch (err: any) {
-      toast.error(err.message || "حدث خطأ أثناء جلب البيانات");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "حدث خطأ أثناء جلب البيانات";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -103,8 +106,9 @@ export default function MorePage() {
       setNewItem({ name: "", phone: "", address: "", categoryId: "" });
       setOpen(false);
       fetchData();
-    } catch (err: any) {
-      toast.error(err.message || "حدث خطأ أثناء الإضافة");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "حدث خطأ أثناء الإضافة";
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -121,16 +125,24 @@ export default function MorePage() {
       
       toast.success("تم الحذف بنجاح");
       fetchData();
-    } catch (err: any) {
-      toast.error(err.message || "حدث خطأ أثناء الحذف");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "حدث خطأ أثناء الحذف";
+      toast.error(message);
     }
   };
 
-  const filtered = data.filter((item: any) => 
-    item.name?.toLowerCase().includes(search.toLowerCase()) || 
-    (item.phone && item.phone.includes(search)) ||
-    (item.categories?.name && item.categories.name.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = data.filter((item: ManagementItem) => {
+    const searchLower = search.toLowerCase();
+
+    const nameMatch = item.name?.toLowerCase().includes(searchLower);
+
+    const phoneMatch = 'phone' in item && item.phone?.includes(search);
+
+    const categoryMatch = 'categories' in item &&
+      item.categories?.name?.toLowerCase().includes(searchLower);
+
+    return nameMatch || phoneMatch || categoryMatch;
+  });
 
   const getIconForTab = (tab: string) => {
     switch(tab) {
@@ -312,10 +324,10 @@ export default function MorePage() {
                   </motion.div>
                 ) : (
                   <AnimatePresence mode="wait">
-                    {activeTab === "customers" && <CustomerList customers={filtered as any} onDelete={handleDelete} />}
-                    {activeTab === "suppliers" && <SupplierList suppliers={filtered as any} onDelete={handleDelete} />}
-                    {activeTab === "products" && <ProductList products={filtered as any} onDelete={handleDelete} />}
-                    {activeTab === "categories" && <CategoryList categories={filtered as any} onDelete={handleDelete} />}
+                    {activeTab === "customers" && <CustomerList customers={filtered as Customer[]} onDelete={handleDelete} />}
+                    {activeTab === "suppliers" && <SupplierList suppliers={filtered as Supplier[]} onDelete={handleDelete} />}
+                    {activeTab === "products" && <ProductList products={filtered as Product[]} onDelete={handleDelete} />}
+                    {activeTab === "categories" && <CategoryList categories={filtered as Category[]} onDelete={handleDelete} />}
                   </AnimatePresence>
                 )}
               </div>
