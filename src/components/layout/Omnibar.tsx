@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/command";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { sanitizeLikePattern } from "@/lib/utils";
 
 export function Omnibar() {
   const [open, setOpen] = React.useState(false);
@@ -37,16 +38,17 @@ export function Omnibar() {
     }
 
     const search = async () => {
+      const sanitizedQuery = sanitizeLikePattern(query);
       const { data: products } = await supabase
         .from('products')
         .select('id, name')
-        .ilike('name', `%${query}%`)
+        .ilike('name', `%${sanitizedQuery}%`)
         .limit(3);
 
       const { data: items } = await supabase
         .from('items')
         .select('barcode')
-        .ilike('barcode', `%${query}%`)
+        .ilike('barcode', `%${sanitizedQuery}%`)
         .limit(3);
 
       const combined: { id: string; name: string; type: 'منتج' | 'قطعة' }[] = [

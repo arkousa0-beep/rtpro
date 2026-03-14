@@ -13,7 +13,7 @@ import { Loader2, ArrowRight, Wallet, Store, Phone, MapPin, ArrowDownRight, Arro
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, sanitizeLikePattern } from "@/lib/utils";
 
 export default function SupplierProfilePage() {
   const params = useParams();
@@ -42,19 +42,10 @@ export default function SupplierProfilePage() {
       .eq('id', id)
       .single();
 
-    // Transactions associated with this supplier logic
-    // Wait, the transactions table might not have supplier_id directly.
-    // Let's check how pay_supplier_debt works. It inserts into transactions with details 'تسديد دفعة لمورد: ...'
-    // To fetch properly, we can search by details or we can add supplier_id if it exists.
-    // Assuming we fetch by details for now since supplier_id isn't in the standard transactions schema.
-    const { data: transData } = await supabase
-      .from('transactions')
-      .select('*')
-      .ilike('details', `%تسديد دفعة لمورد: ${supplierData?.name}%`)
-      .order('created_at', { ascending: false });
 
-    if (supplierData) setSupplier(supplierData);
-    if (transData) setTransactions(transData as any[]);
+
+      if (transData) setTransactions(transData as any[]);
+    }
     
     setLoading(false);
   }
