@@ -1,0 +1,9 @@
+{
+  "terminal.integrated.fontFamily": "'Cascadia Code', 'Courier New', monospace",
+  "terminal.integrated.gpuAcceleration": "on",
+  "terminal.integrated.localEchoEnabled": false,
+  "files.encoding": "utf8",
+  "terminal.integrated.env.windows": {
+    "LC_ALL": "en_US.UTF-8"
+  }
+}
