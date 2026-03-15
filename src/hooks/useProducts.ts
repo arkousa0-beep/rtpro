@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { productService, Product } from '@/lib/services/productService';
 import { toast } from 'sonner';
 
@@ -7,7 +7,7 @@ export function useProducts() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
       const data = await productService.getAll();
@@ -17,22 +17,22 @@ export function useProducts() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [fetchProducts]);
 
   const addProduct = async (newProduct: Partial<Product>) => {
     setSubmitting(true);
     try {
-      await productService.create(newProduct);
+      const created = await productService.create(newProduct);
       toast.success('تم إضافة المنتج بنجاح');
       await fetchProducts();
-      return true;
+      return created; // Returning the created product object
     } catch (err: any) {
       toast.error(err.message || 'حدث خطأ أثناء الإضافة');
-      return false;
+      return null;
     } finally {
       setSubmitting(false);
     }

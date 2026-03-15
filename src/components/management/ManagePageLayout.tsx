@@ -8,7 +8,6 @@ import {
   Loader2,
   ChevronRight,
   Plus,
-  PackagePlus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -29,7 +28,7 @@ interface ManagePageLayoutProps {
   addButtonLabel?: string;
   addDialogTitle?: string;
   addDialogIcon: React.ElementType;
-  addDialogContent: React.ReactNode;
+  addDialogContent?: React.ReactNode;
   isDialogOpen: boolean;
   onDialogOpenChange: (open: boolean) => void;
   isLoading: boolean;
@@ -37,14 +36,10 @@ interface ManagePageLayoutProps {
   iconColor?: string;
   buttonColor?: string;
   extraContent?: React.ReactNode;
-  addLink?: string; // Added addLink prop
+  addLink?: string;
+  onAddClick?: () => void; // Optional explicit click handler to bypass dialog trigger
 }
 
-/**
- * ManagePageLayout Component
- * Centralized layout for management pages (Customers, Suppliers, Categories, etc.)
- * Ensures consistent premium mobile-first UI across the app.
- */
 export const ManagePageLayout = ({
   title,
   subtitle,
@@ -62,7 +57,8 @@ export const ManagePageLayout = ({
   iconColor = "text-primary",
   buttonColor = "bg-primary",
   extraContent,
-  addLink // Destructure addLink
+  addLink,
+  onAddClick
 }: ManagePageLayoutProps) => {
   return (
     <div className="min-h-screen pb-32 pt-6 space-y-8 px-1">
@@ -100,31 +96,38 @@ export const ManagePageLayout = ({
                   <span className="hidden md:inline">{addButtonLabel}</span>
                 </Link>
               </Button>
+            ) : onAddClick ? (
+              <Button onClick={onAddClick} className={cn("h-14 px-6 rounded-2xl text-white shadow-xl shadow-primary/20 font-black border border-white/10 group active:scale-95 transition-all text-lg", buttonColor)}>
+                <Plus className="w-6 h-6 md:ml-2 group-hover:rotate-90 transition-transform duration-300" />
+                <span className="hidden md:inline">{addButtonLabel}</span>
+              </Button>
             ) : (
               <Dialog open={isDialogOpen} onOpenChange={onDialogOpenChange}>
-                <DialogTrigger render={
+                <DialogTrigger asChild>
                   <Button className={cn("h-14 px-6 rounded-2xl text-white shadow-xl shadow-primary/20 font-black border border-white/10 group active:scale-95 transition-all text-lg", buttonColor)}>
                     <Plus className="w-6 h-6 md:ml-2 group-hover:rotate-90 transition-transform duration-300" />
                     <span className="hidden md:inline">{addButtonLabel}</span>
                   </Button>
-                } />
-                <DialogContent className="rounded-[2.5rem] border-white/5 bg-black/60 backdrop-blur-3xl shadow-2xl p-8 max-w-sm mx-auto">
-                  <DialogHeader className="space-y-3">
-                    <div className={cn("w-16 h-16 rounded-[1.5rem] bg-white/5 flex items-center justify-center border border-white/10 mx-auto mb-2", iconColor)}>
-                      <AddIcon className="w-8 h-8" />
-                    </div>
-                    <DialogTitle className="text-center text-2xl font-black text-white">
-                      {addDialogTitle || `إضافة ${title}`}
-                    </DialogTitle>
-                  </DialogHeader>
-                  {addDialogContent}
-                </DialogContent>
+                </DialogTrigger>
+                {addDialogContent && (
+                  <DialogContent className="rounded-[2.5rem] border-white/5 bg-black/60 backdrop-blur-3xl shadow-2xl p-8 max-w-sm mx-auto">
+                    <DialogHeader className="space-y-3">
+                      <div className={cn("w-16 h-16 rounded-[1.5rem] bg-white/5 flex items-center justify-center border border-white/10 mx-auto mb-2", iconColor)}>
+                        <AddIcon className="w-8 h-8" />
+                      </div>
+                      <DialogTitle className="text-center text-2xl font-black text-white">
+                        {addDialogTitle || `إضافة ${title}`}
+                      </DialogTitle>
+                    </DialogHeader>
+                    {addDialogContent}
+                  </DialogContent>
+                )}
               </Dialog>
             )
           )}
         </div>
 
-        {extraContent} {/* Render extraContent here */}
+        {extraContent}
 
         {isLoading ? (
           <div className="text-center py-24 space-y-4">
