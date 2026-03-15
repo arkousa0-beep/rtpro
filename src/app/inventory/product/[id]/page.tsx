@@ -5,12 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Product, Item, Category } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowRight, Package, Tag, Box, TrendingUp, AlertCircle, Plus } from "lucide-react";
+import { Loader2, ArrowRight, Tag, Box, TrendingUp, AlertCircle, Plus, Printer } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { BarcodePrinter } from "@/components/management/BarcodePrinter";
 
 export default function ProductDetailsPage() {
   const params = useParams();
@@ -79,15 +80,15 @@ export default function ProductDetailsPage() {
     <div className="min-h-screen pb-32 pt-6 px-4 space-y-6 max-w-4xl mx-auto text-right" dir="rtl">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="rounded-2xl glass" onClick={() => router.back()}>
-            <ArrowRight className="w-5 h-5" />
+          <Button variant="ghost" size="icon" className="rounded-2xl glass h-12 w-12 border border-white/10" onClick={() => router.back()}>
+            <ArrowRight className="w-6 h-6 text-white/70" />
           </Button>
           <div>
-            <h2 className="text-2xl font-black text-white">{product.name}</h2>
-            <p className="text-sm text-white/50">{product.categories?.name || 'بدون قسم'}</p>
+            <h2 className="text-3xl font-black text-white">{product.name}</h2>
+            <p className="text-sm text-white/50 font-bold mt-1">{product.categories?.name || 'بدون قسم'}</p>
           </div>
         </div>
-        <Button asChild className="rounded-2xl bg-primary hover:bg-primary/90 text-white font-black px-6">
+        <Button asChild className="rounded-2xl h-12 bg-primary hover:bg-primary/90 text-black font-black px-6 shadow-lg shadow-primary/20 active:scale-95 transition-all">
           <Link href={`/inventory/add?productId=${product.id}`}>
             <Plus className="w-5 h-5 ml-2" />
             إضافة قطعة
@@ -97,27 +98,33 @@ export default function ProductDetailsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="glass border-white/5 rounded-3xl p-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -z-10" />
+          <div className="absolute top-0 left-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -z-10" />
           <Box className="w-8 h-8 text-blue-400 mb-4" />
           <p className="text-sm font-bold text-white/40 mb-1">إجمالي القطع</p>
           <p className="text-3xl font-black text-white">{items.length}</p>
         </Card>
         <Card className="glass border-white/5 rounded-3xl p-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl -z-10" />
+          <div className="absolute top-0 left-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl -z-10" />
           <TrendingUp className="w-8 h-8 text-emerald-400 mb-4" />
           <p className="text-sm font-bold text-white/40 mb-1">متوفر بالمخزن</p>
           <p className="text-3xl font-black text-white">{inStockCount}</p>
         </Card>
         <Card className="glass border-white/5 rounded-3xl p-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl -z-10" />
+          <div className="absolute top-0 left-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl -z-10" />
           <AlertCircle className="w-8 h-8 text-amber-400 mb-4" />
           <p className="text-sm font-bold text-white/40 mb-1">تم بيعها</p>
           <p className="text-3xl font-black text-white">{soldCount}</p>
         </Card>
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-xl font-black text-white pr-2">جميع القطع (سيريال)</h3>
+      <div className="space-y-4 pt-4">
+        <div className="flex items-center justify-between pr-2">
+          <h3 className="text-xl font-black text-white">القطع المتاحة</h3>
+          <span className="text-xs font-bold text-white/30 tracking-widest bg-white/5 px-3 py-1 rounded-full border border-white/5">
+            حسب الأحدث
+          </span>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <AnimatePresence mode="popLayout">
             {items.map((item, idx) => (
@@ -127,36 +134,43 @@ export default function ProductDetailsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
               >
-                <Card className="glass border-white/5 rounded-2xl p-4 hover:border-white/20 transition-all group">
+                <Card className="glass border-white/5 rounded-[2rem] p-4 hover:bg-white/[0.04] transition-all group shadow-xl shadow-black/40">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
                       <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center border",
+                        "w-12 h-12 rounded-2xl flex items-center justify-center border",
                         item.status === 'In-Stock' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-white/5 border-white/5 text-white/20'
                       )}>
-                        <Tag className="w-5 h-5" />
+                        <Tag className="w-6 h-6" />
                       </div>
-                      <div>
-                        <code className="text-sm font-mono font-bold text-white group-hover:text-primary transition-colors">
+                      <div className="text-right">
+                        <code className="text-sm font-mono font-black text-white tracking-widest">
                           {item.barcode}
                         </code>
-                        <div className="flex gap-2 mt-1">
-                          <span className="text-[10px] text-white/30">{Number(item.selling_price).toLocaleString()} ج.م</span>
+                        <div className="flex gap-2 mt-1 items-center">
+                          <span className="text-[10px] text-primary font-black bg-primary/10 px-2 rounded">{Number(item.selling_price).toLocaleString()} ج.م</span>
                           <span className="text-[10px] text-white/10 uppercase font-black">|</span>
-                          <span className="text-[10px] text-white/30">{new Date(item.created_at || '').toLocaleDateString('ar-EG')}</span>
+                          <span className="text-[10px] text-white/30 font-bold">{new Date(item.created_at || '').toLocaleDateString('ar-EG')}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <Badge className={cn(
-                        "rounded-lg px-2 py-1 text-[10px] font-black",
-                        item.status === 'In-Stock' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-white/5 text-white/20 border-white/5"
+                        "rounded-xl px-3 py-1 text-[10px] font-black border-none hidden sm:flex",
+                        item.status === 'In-Stock' ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-white/40"
                       )}>
                         {item.status === 'In-Stock' ? 'متاح' : 'مباع'}
                       </Badge>
-                      <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" asChild>
+
+                      <BarcodePrinter
+                        value={item.barcode}
+                        name={product.name}
+                        price={Number(item.selling_price)}
+                      />
+
+                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 hover:bg-primary/10 text-white/50 hover:text-primary transition-all border border-white/5" asChild>
                         <Link href={`/inventory/item/${item.barcode}`}>
-                          <ArrowRight className="w-4 h-4 rotate-180" />
+                          <ArrowRight className="w-5 h-5 rotate-180" />
                         </Link>
                       </Button>
                     </div>
@@ -164,6 +178,13 @@ export default function ProductDetailsPage() {
                 </Card>
               </motion.div>
             ))}
+
+            {items.length === 0 && (
+              <div className="col-span-full py-12 flex flex-col items-center justify-center text-white/30 space-y-4">
+                <Box className="w-12 h-12 opacity-20" />
+                <p className="font-bold">لا توجد قطع مضافة لهذا المنتج</p>
+              </div>
+            )}
           </AnimatePresence>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { Cairo } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Omnibar } from "@/components/layout/Omnibar";
+import { ServiceWorkerRegister } from "@/components/layout/ServiceWorkerRegister";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
 
@@ -35,6 +36,7 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className="dark">
       <body className={cn(cairo.className, "min-h-screen bg-background text-foreground antialiased selection:bg-primary/30")}>
+        <ServiceWorkerRegister />
         <header className="fixed top-0 left-0 right-0 z-50 h-16 glass border-b flex items-center justify-between px-6">
           <div className="flex flex-col items-start leading-none">
             <span className="text-xs font-medium text-primary/80 mb-0.5">RT PRO</span>
