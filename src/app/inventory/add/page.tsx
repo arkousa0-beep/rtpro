@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { ProductModal } from "@/components/management/ProductModal";
 
 import { productService, Product } from "@/lib/services/productService";
 import { supplierService, Supplier } from "@/lib/services/supplierService";
@@ -37,23 +38,25 @@ export default function AddItemPage() {
   });
 
   const [mode, setMode] = useState<"single" | "batch">("single");
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      const [prodData, suppData, catData] = await Promise.all([
+        productService.getAll(),
+        supplierService.getAll(),
+        categoryService.getAll()
+      ]);
+
+      if (prodData) setProducts(prodData);
+      if (suppData) setSuppliers(suppData);
+      if (catData) setCategories(catData);
+    } catch (err: any) {
+      toast.error("حدث خطأ أثناء جلب البيانات");
+    }
+  };
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const [prodData, suppData, catData] = await Promise.all([
-          productService.getAll(),
-          supplierService.getAll(),
-          categoryService.getAll()
-        ]);
-        
-        if (prodData) setProducts(prodData);
-        if (suppData) setSuppliers(suppData);
-        if (catData) setCategories(catData);
-      } catch (err: any) {
-        toast.error("حدث خطأ أثناء جلب البيانات");
-      }
-    }
     fetchData();
   }, []);
 
@@ -125,6 +128,7 @@ export default function AddItemPage() {
         </div>
       </div>
 
+      <ProductModal open={isProductModalOpen} onOpenChange={setIsProductModalOpen} onSuccess={(newId) => { setFormData(prev => ({...prev, productId: newId})); fetchData(); }} />
       <form onSubmit={handleSubmit} className="space-y-6">
         <motion.div 
           initial={{ opacity: 0, y: 20 }} 
@@ -187,9 +191,9 @@ export default function AddItemPage() {
                           <SelectItem key={p.id} value={p.id} className="focus:bg-primary/20 focus:text-primary transition-colors">{p.name}</SelectItem>
                         ))
                       }
-                      <Link href="/inventory/products/new" className="flex items-center gap-2 p-4 text-primary font-black hover:bg-primary/10 transition-all border-t border-white/5 mt-2 group">
+                      <button type="button" onClick={() => setIsProductModalOpen(true)} className="flex items-center gap-2 p-4 text-primary font-black hover:bg-primary/10 transition-all border-t border-white/5 mt-2 group">
                          <Plus className="w-5 h-5 group-hover:scale-125 transition-transform" /> إضافة منتج جديد
-                      </Link>
+                      </button>
                     </SelectContent>
                   </Select>
                 </div>
