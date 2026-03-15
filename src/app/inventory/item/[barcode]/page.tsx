@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Item, ItemHistory } from "@/lib/database.types";
+import { Item, ItemHistory, Customer } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ export default function ItemDetailsPage() {
   const barcode = params.barcode as string;
   const router = useRouter();
 
-  const [item, setItem] = useState<Item | null>(null);
+  const [item, setItem] = useState<(Item & { customers?: Customer }) | null>(null);
   const [history, setHistory] = useState<ItemHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,8 +29,8 @@ export default function ItemDetailsPage() {
     setLoading(true);
     try {
       const { data: itemData, error: itemError } = await supabase
-        .from('inventory')
-        .select('*, products(*, categories(*))')
+        .from('items')
+        .select('*, products(*, categories(*)), customers(*)')
         .eq('barcode', barcode)
         .single();
 
@@ -45,8 +45,9 @@ export default function ItemDetailsPage() {
 
       if (historyError) throw historyError;
       setHistory(historyData || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching item details:", error);
+      // Optional: use toast but not strictly requested, just fixing the console error visibility
     } finally {
       setLoading(false);
     }
@@ -140,6 +141,13 @@ export default function ItemDetailsPage() {
                 <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-4 py-2 rounded-xl font-bold flex gap-2">
                   <Calendar className="w-4 h-4" /> تاريخ البيع: {new Date(item.sold_date).toLocaleDateString('ar-EG')}
                 </Badge>
+              )}
+              {item.customers && (
+                <Link href={`/customers?search=${item.customer_id}`}>
+                  <Badge className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 px-4 py-2 rounded-xl font-bold flex gap-2 hover:bg-indigo-500/20 transition-all">
+                    <History className="w-4 h-4" /> المشتري: {item.customers.name}
+                  </Badge>
+                </Link>
               )}
             </div>
           </CardContent>

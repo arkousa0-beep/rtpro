@@ -73,10 +73,10 @@ export default function Home() {
   }, []);
 
   const cards = [
-    { title: "مبيعات اليوم", value: `${stats.todaySales}`, unit: "ج.م", icon: TrendingUp, color: "text-primary", bg: "bg-primary/10" },
-    { title: "المخزن", value: stats.totalItems, unit: "قطع", icon: Package, color: "text-amber-400", bg: "bg-amber-400/10" },
-    { title: "العملاء", value: stats.customers, unit: "عميل", icon: Users, color: "text-orange-400", bg: "bg-orange-400/10" },
-    { title: "النواقص", value: stats.lowStock, unit: "منتج", icon: AlertCircle, color: "text-red-400", bg: "bg-red-400/10" },
+    { title: "مبيعات اليوم", value: `${stats.todaySales}`, unit: "ج.م", icon: TrendingUp, color: "text-primary", bg: "bg-primary/10", href: "/transactions" },
+    { title: "المخزن", value: stats.totalItems, unit: "قطع", icon: Package, color: "text-amber-400", bg: "bg-amber-400/10", href: "/inventory" },
+    { title: "العملاء", value: stats.customers, unit: "عميل", icon: Users, color: "text-orange-400", bg: "bg-orange-400/10", href: "/customers" },
+    { title: "النواقص", value: stats.lowStock, unit: "منتج", icon: AlertCircle, color: "text-red-400", bg: "bg-red-400/10", href: "/inventory" },
   ];
 
   return (
@@ -118,20 +118,22 @@ export default function Home() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 * idx }}
           >
-            <Card className="glass border-white/5 rounded-3xl overflow-hidden hover:bg-white/[0.04] transition-all hover:-translate-y-1">
-              <CardContent className="p-5 flex flex-col gap-4">
-                <div className={`w-12 h-12 rounded-2xl ${card.bg} flex items-center justify-center ${card.color} border border-white/5`}>
-                  <card.icon className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-white/50">{card.title}</p>
-                  <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-2xl font-black text-white">{card.value}</span>
-                    <span className="text-[10px] font-bold opacity-30">{card.unit}</span>
+            <Link href={card.href || "#"}>
+              <Card className="glass border-white/5 rounded-3xl overflow-hidden hover:bg-white/[0.04] transition-all hover:-translate-y-1">
+                <CardContent className="p-5 flex flex-col gap-4">
+                  <div className={`w-12 h-12 rounded-2xl ${card.bg} flex items-center justify-center ${card.color} border border-white/5`}>
+                    <card.icon className="h-6 w-6" />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                  <div>
+                    <p className="text-xs font-bold text-white/50">{card.title}</p>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <span className="text-2xl font-black text-white">{card.value}</span>
+                      <span className="text-[10px] font-bold opacity-30">{card.unit}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </motion.div>
         ))}
       </div>
@@ -172,18 +174,22 @@ export default function Home() {
           </Link>
 
           <div className="grid grid-cols-2 gap-4">
-            <Card className="p-5 flex flex-col items-center gap-3 rounded-[2rem] glass border-white/5 hover:bg-white/[0.04] cursor-pointer transition-all active:scale-95">
-              <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/70 border border-white/5 group-hover:bg-white/10 transition-colors">
-                <History className="w-6 h-6" />
-              </div>
-              <span className="font-black text-xs text-white/80">سجل العمليات</span>
-            </Card>
-            <Card className="p-5 flex flex-col items-center gap-3 rounded-[2rem] glass border-white/5 hover:bg-white/[0.04] cursor-pointer transition-all active:scale-95">
-              <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/70 border border-white/5 group-hover:bg-white/10 transition-colors">
-                <Users className="w-6 h-6" />
-              </div>
-              <span className="font-black text-xs text-white/80">إدارة العملاء</span>
-            </Card>
+            <Link href="/transactions">
+              <Card className="p-5 flex flex-col items-center gap-3 rounded-[2rem] glass border-white/5 hover:bg-white/[0.04] cursor-pointer transition-all active:scale-95 group">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/70 border border-white/5 group-hover:bg-white/10 transition-colors">
+                  <History className="w-6 h-6" />
+                </div>
+                <span className="font-black text-xs text-white/80">سجل العمليات</span>
+              </Card>
+            </Link>
+            <Link href="/customers">
+              <Card className="p-5 flex flex-col items-center gap-3 rounded-[2rem] glass border-white/5 hover:bg-white/[0.04] cursor-pointer transition-all active:scale-95 group">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/70 border border-white/5 group-hover:bg-white/10 transition-colors">
+                  <Users className="w-6 h-6" />
+                </div>
+                <span className="font-black text-xs text-white/80">إدارة العملاء</span>
+              </Card>
+            </Link>
           </div>
         </div>
       </div>

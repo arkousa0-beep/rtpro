@@ -39,21 +39,21 @@ export function Omnibar() {
 
     const search = async () => {
       const sanitizedQuery = sanitizeLikePattern(query);
-      const { data: products } = await supabase
-        .from('products')
-        .select('id, name')
-        .ilike('name', `%${sanitizedQuery}%`)
-        .limit(3);
+      
+      const [
+        { data: products },
+        { data: items },
+        { data: customers }
+      ] = await Promise.all([
+        supabase.from('products').select('id, name').ilike('name', `%${sanitizedQuery}%`).limit(3),
+        supabase.from('items').select('barcode').ilike('barcode', `%${sanitizedQuery}%`).limit(5),
+        supabase.from('customers').select('id, name').ilike('name', `%${sanitizedQuery}%`).limit(3)
+      ]);
 
-      const { data: items } = await supabase
-        .from('items')
-        .select('barcode')
-        .ilike('barcode', `%${sanitizedQuery}%`)
-        .limit(3);
-
-      const combined: { id: string; name: string; type: 'منتج' | 'قطعة' }[] = [
+      const combined: { id: string; name: string; type: 'منتج' | 'قطعة' | 'عميل' }[] = [
         ...(products?.map(p => ({ id: p.id, name: p.name, type: 'منتج' as const })) || []),
         ...(items?.map(i => ({ id: i.barcode, name: `سيريال: ${i.barcode}`, type: 'قطعة' as const })) || []),
+        ...(customers?.map(c => ({ id: c.id, name: c.name, type: 'عميل' as const })) || []),
       ];
       
       setResults(combined);
@@ -67,6 +67,7 @@ export function Omnibar() {
     setOpen(false);
     if (type === 'منتج') router.push(`/inventory/product/${id}`);
     if (type === 'قطعة') router.push(`/inventory/item/${id}`);
+    if (type === 'عميل') router.push(`/customers?search=${id}`);
   };
 
   return (

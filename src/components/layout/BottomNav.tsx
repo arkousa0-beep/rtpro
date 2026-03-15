@@ -45,7 +45,7 @@ export function BottomNav() {
               />
             )}
             <Icon className={cn("w-6 h-6 transition-transform", isActive && "scale-110")} />
-            <span className={cn("text-[10px] font-bold tracking-wide transition-opacity", !isActive && "opacity-70")}>
+            <span className={cn("text-[12px] font-bold tracking-wide transition-opacity", !isActive && "opacity-70")}>
               {link.name}
             </span>
             {isActive && (
