@@ -51,3 +51,19 @@ export interface Transaction {
   customer_id?: string | null;
   created_at: string;
 }
+
+export interface ItemHistory {
+  id: string;
+  item_barcode: string;
+  action: 'Received' | 'Sold' | 'Returned' | 'Adjustment';
+  details?: string;
+  created_at: string;
+}
+
+export interface SupplierTransaction {
+  id: string;
+  supplier_id: string;
+  amount: number;
+  payment_method: string;
+  created_at: string;
+}

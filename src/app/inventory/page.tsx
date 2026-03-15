@@ -3,52 +3,56 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { PackagePlus, LayoutGrid, Tag, Circle } from "lucide-react";
+import { PackagePlus, LayoutGrid, Tag, Circle, Edit, Box, Search, Filter, ArrowUpRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ManagePageLayout } from "@/components/management/ManagePageLayout";
 import { useInventory } from "@/hooks/useInventory";
+import { useProducts } from "@/hooks/useProducts";
+import { ProductModal } from "@/components/management/ProductModal";
+import { Button } from "@/components/ui/button";
+import { Product } from "@/lib/database.types";
 import Link from "next/link";
 
 export default function InventoryPage() {
-  const { items, categories, loading } = useInventory();
+  const { items, categories, loading, refresh } = useInventory();
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const filteredItems = items.filter(item => {
-    const itemName = item.products?.name || "";
-    const matchesSearch = item.barcode.toLowerCase().includes(search.toLowerCase()) ||
-                         itemName.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || item.products?.category_id === selectedCategory;
+    const matchesSearch = item.barcode.toLowerCase().includes(search.toLowerCase()) || 
+                          item.products?.name.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = !activeCategory || item.products?.category_id === activeCategory;
     return matchesSearch && matchesCategory;
   });
 
+  const stats = [
+    { label: 'إجمالي القطع', value: items.length, icon: Box, color: 'text-blue-400' },
+    { label: 'في المخزن', value: items.filter(i => i.status === 'In-Stock').length, icon: PackagePlus, color: 'text-emerald-400' },
+  ];
+
   const categoryFilters = (
-    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-2 px-2">
-      <button
-        onClick={() => setSelectedCategory("all")}
-        className={cn(
-          "px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all border shrink-0",
-          selectedCategory === "all" 
-            ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
-            : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
-        )}
+    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+      <Button
+        variant={!activeCategory ? "secondary" : "ghost"}
+        size="sm"
+        className={cn("rounded-full whitespace-nowrap", !activeCategory && "bg-white/10 text-white")}
+        onClick={() => setActiveCategory(null)}
       >
         الكل
-      </button>
+      </Button>
       {categories.map((cat) => (
-        <button
+        <Button
           key={cat.id}
-          onClick={() => setSelectedCategory(cat.id!)}
-          className={cn(
-            "px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all border shrink-0",
-            selectedCategory === cat.id 
-              ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
-              : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
-          )}
+          variant={activeCategory === cat.id ? "secondary" : "ghost"}
+          size="sm"
+          className={cn("rounded-full whitespace-nowrap", activeCategory === cat.id && "bg-white/10 text-white")}
+          onClick={() => setActiveCategory(cat.id)}
         >
           {cat.name}
-        </button>
+        </Button>
       ))}
     </div>
   );
@@ -62,97 +66,104 @@ export default function InventoryPage() {
       onSearchChange={setSearch}
       addButtonLabel="إضافة صنف"
       addLink="/inventory/add"
-      addDialogIcon={PackagePlus}
-      addDialogTitle="إضافة صنف جديد"
-      addDialogContent={null}
-      isDialogOpen={false}
-      onDialogOpenChange={() => {}}
       isLoading={loading}
-      iconColor="text-emerald-500"
-      buttonColor="bg-emerald-600"
       extraContent={categoryFilters}
     >
-      {filteredItems.length === 0 ? (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-24 glass border-2 border-dashed border-white/5 rounded-[3rem] text-white/20 gap-6"
-        >
-          <div className="p-8 rounded-[2rem] bg-white/5 border border-white/5 shadow-inner">
-            <LayoutGrid className="w-16 h-16 opacity-20" />
-          </div>
-          <div className="text-center space-y-2">
-            <p className="font-black text-2xl text-white/80 tracking-tight">لا توجد قطع مطابقة</p>
-            <p className="text-sm font-medium text-white/40 italic">جرب البحث بكلمات مختلفة أو تغيير التصنيف</p>
-          </div>
-        </motion.div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <AnimatePresence mode="popLayout">
-            {filteredItems.map((item, idx) => (
-              <motion.div
-                key={item.barcode}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ delay: idx * 0.05, type: "spring", stiffness: 100 }}
-              >
-                <Link href={`/inventory/item/${item.barcode}`}>
-                  <Card className="glass border-white/5 rounded-[2.5rem] overflow-hidden hover:bg-white/[0.04] transition-all group active:scale-[0.98] relative cursor-pointer">
-                    <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-all" />
-                    <CardContent className="p-6 flex flex-col gap-5 relative z-10">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 flex items-center justify-center text-emerald-500 border border-emerald-500/10 shadow-inner group-hover:rotate-6 transition-transform">
-                            <PackagePlus className="w-8 h-8" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-black text-xl text-white truncate group-hover:text-emerald-400 transition-colors leading-tight">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <AnimatePresence mode="popLayout">
+          {filteredItems.map((item, idx) => (
+            <motion.div
+              key={item.barcode}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ delay: idx * 0.05 }}
+            >
+              <Card className="group relative overflow-hidden bg-white/[0.03] border-white/5 hover:bg-white/[0.05] hover:border-white/10 transition-all duration-500">
+                <CardContent className="p-6">
+                  <div className="space-y-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                          <Box className="w-6 h-6 text-white/40 group-hover:text-emerald-400 transition-colors" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-black text-xl text-white truncate group-hover:text-emerald-400 transition-colors leading-tight">
+                            <Link href={`/inventory/item/${item.barcode}`} className="hover:underline">
                               {item.products?.name}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Tag className="w-3 h-3 text-white/20" />
-                              <span className="text-xs font-black text-white/20 font-mono tracking-wider">{item.barcode}</span>
+                            </Link>
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Tag className="w-3 h-3 text-white/20" />
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                              {item.products?.categories?.name || 'بدون قسم'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-8 h-8 rounded-full hover:bg-white/10 text-white/40 hover:text-indigo-400 group"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingProduct(item.products || null);
+                                setShowProductModal(true);
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <div className={cn(
+                              "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                              item.status === 'In-Stock' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                              item.status === 'Sold' ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" :
+                              "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                            )}>
+                              {item.status === 'In-Stock' ? 'متاح' : 'مباع'}
                             </div>
-                          </div>
                         </div>
-                        <div className={cn(
-                          "px-3 py-1 rounded-full flex items-center gap-2 border",
-                          item.status === 'In-Stock' 
-                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                            : 'bg-white/5 border-white/10 text-white/20'
-                        )}>
-                          <Circle className={cn("w-2 h-2 fill-current", item.status === 'In-Stock' && "animate-pulse")} />
-                          <span className="text-[10px] font-black uppercase tracking-widest leading-none">
-                            {item.status === 'In-Stock' ? 'متاح' : 'مباع'}
-                          </span>
-                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-white/20 font-bold uppercase tracking-widest block">الباركود</span>
+                        <code className="text-sm font-mono text-white/60 group-hover:text-white transition-colors">
+                          {item.barcode}
+                        </code>
                       </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-white/20 uppercase tracking-wider block">سعر البيع</span>
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-white">{item.selling_price}</span>
-                            <span className="text-[10px] font-bold text-emerald-500">ج.م</span>
-                          </div>
-                        </div>
-                        <div className="space-y-1 text-left">
-                           <span className="text-[10px] font-bold text-white/20 uppercase tracking-wider block">التصنيف</span>
-                           <Badge className="bg-white/5 text-white/60 hover:bg-white/10 rounded-lg font-bold border-none h-7 px-3">
-                              {item.products?.categories?.name || "عام"}
-                           </Badge>
-                        </div>
+                      <div className="space-y-1 text-left">
+                        <span className="text-[10px] text-white/20 font-bold uppercase tracking-widest block">تاريخ الإضافة</span>
+                        <span className="text-xs text-white/40">
+                          {item.created_at ? new Date(item.created_at).toLocaleDateString('ar-EG') : '---'}
+                        </span>
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      )}
+                    </div>
+
+                    <Link 
+                      href={`/inventory/item/${item.barcode}`}
+                      className="flex items-center justify-between group/link pt-2"
+                    >
+                      <span className="text-xs font-bold text-white/20 group-hover/link:text-emerald-400/60 transition-colors">عرض التفاصيل</span>
+                      <ArrowUpRight className="w-4 h-4 text-white/10 group-hover/link:text-emerald-400 transition-transform group-hover/link:translate-x-1 group-hover/link:-translate-y-1" />
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      <ProductModal 
+        open={showProductModal} 
+        onOpenChange={setShowProductModal}
+        initialData={editingProduct}
+        onSuccess={() => {
+          setEditingProduct(null);
+          refresh();
+        }}
+      />
     </ManagePageLayout>
   );
 }

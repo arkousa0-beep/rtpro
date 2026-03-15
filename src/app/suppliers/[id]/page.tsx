@@ -42,10 +42,15 @@ export default function SupplierProfilePage() {
       .eq('id', id)
       .single();
 
+    if (supplierData) setSupplier(supplierData);
 
+    const { data: transData } = await supabase
+      .from('supplier_transactions')
+      .select('*')
+      .eq('supplier_id', id)
+      .order('created_at', { ascending: false });
 
-      if (transData) setTransactions(transData as any[]);
-    }
+    if (transData) setTransactions(transData as any[]);
     
     setLoading(false);
   }

@@ -38,6 +38,20 @@ export function useProducts() {
     }
   };
 
+  const updateProduct = async (id: string, product: Partial<Product>) => {
+    setSubmitting(true);
+    try {
+      await productService.update(id, product);
+      await fetchProducts();
+      return true;
+    } catch (err: any) {
+      toast.error(err.message || 'حدث خطأ أثناء التحديث');
+      return false;
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const deleteProduct = async (id: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا المنتج الأساسي؟ الشطب سيؤثر على سجلات المخزن.')) return;
     try {
@@ -54,6 +68,7 @@ export function useProducts() {
     loading, 
     submitting, 
     addProduct, 
+    updateProduct,
     deleteProduct, 
     refresh: fetchProducts 
   };

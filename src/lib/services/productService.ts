@@ -28,6 +28,16 @@ export const productService = {
     return data;
   },
 
+  async update(id: string, product: Partial<Product>) {
+    const { data, error } = await supabase
+      .from('products')
+      .update(product)
+      .eq('id', id)
+      .select();
+    if (error) throw error;
+    return data;
+  },
+
   async delete(id: string) {
     const { error } = await supabase
       .from('products')
