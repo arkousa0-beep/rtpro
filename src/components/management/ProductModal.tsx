@@ -37,20 +37,12 @@ export function ProductModal({ open, onOpenChange, onSuccess }: ProductModalProp
     e.preventDefault();
     if (!newProduct.category_id) return toast.warning("يرجى اختيار التصنيف");
 
-    const createdProduct = await addProduct(newProduct);
-    if (createdProduct && Array.isArray(createdProduct) && createdProduct.length > 0) {
+    const createdProduct = await addProduct(newProduct) as any;
+    if (createdProduct) {
+      const id = Array.isArray(createdProduct) ? createdProduct[0]?.id : createdProduct.id;
       setNewProduct({ name: "", category_id: "" });
       onOpenChange(false);
-      onSuccess?.(createdProduct[0].id);
-    } else if (createdProduct && createdProduct.id) {
-      setNewProduct({ name: "", category_id: "" });
-      onOpenChange(false);
-      onSuccess?.(createdProduct.id);
-    } else if (createdProduct) {
-      // In case it returns just boolean true or an object without ID that we can't extract, we still succeed.
-      setNewProduct({ name: "", category_id: "" });
-      onOpenChange(false);
-      onSuccess?.("");
+      onSuccess?.(id || "");
     }
   };
 
@@ -83,7 +75,7 @@ export function ProductModal({ open, onOpenChange, onSuccess }: ProductModalProp
               value={newProduct.category_id}
               onValueChange={val => setNewProduct({...newProduct, category_id: val ?? ""})}
             >
-              <SelectTrigger className="h-14 rounded-2xl bg-white/[0.05] border-white/5 text-white focus:ring-indigo-500 glass flex-row-reverse">
+              <SelectTrigger className="h-14 rounded-2xl bg-white/[0.05] border-white/5 text-white focus:ring-indigo-500 glass w-full">
                 {newProduct.category_id ? (
                   <span className="block truncate">{categories.find(c => c.id === newProduct.category_id)?.name}</span>
                 ) : (
