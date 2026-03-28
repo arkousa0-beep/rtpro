@@ -2,10 +2,13 @@ import { createClient } from '@/lib/supabase/client';
 
 const supabase = createClient();
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 export interface TransactionDetails {
   id: string;
   type: 'Sale' | 'Return' | 'Exchange' | 'Payment' | 'SupplierPayment';
   total: number;
+  paid_amount: number;
   method: string;
   customer_id: string | null;
   supplier_id: string | null;
@@ -20,17 +23,19 @@ export interface TransactionDetails {
   } | null;
   items?: Array<{
     barcode: string;
-    selling_price: number;
+    price: number;
     products: {
       name: string;
       image_url: string | null;
-    }
+    };
   }>;
 }
 
+// ─── Service ──────────────────────────────────────────────────────────────────
+
 export const transactionService = {
   async getTransactionDetails(id: string): Promise<TransactionDetails | null> {
-    // 1. Fetch transaction and customer/supplier info
+    // 1. Fetch transaction with relations
     const { data: transaction, error: transError } = await supabase
       .from('transactions')
       .select(`
@@ -43,36 +48,24 @@ export const transactionService = {
 
     if (transError || !transaction) return null;
 
-    // 2. Fetch items linked to this transaction via item_history
-    // In our schema, when a sale happens, we log in item_history with target_id = v_transaction_id
-    const { data: history, error: historyError } = await supabase
-      .from('item_history')
+    // 2. Fetch items from transaction_items (historical price, not current)
+    const { data: txItems, error: txItemsError } = await supabase
+      .from('transaction_items')
       .select(`
-        item_barcode,
-        items (
-          barcode,
-          selling_price,
-          products (
-            name,
-            image_url
-          )
-        )
+        barcode,
+        price,
+        products(name, image_url)
       `)
-      .eq('target_id', id)
-      .eq('action', 'Sold');
+      .eq('transaction_id', id);
 
-    if (historyError) {
-      console.error('Error fetching items for transaction:', historyError);
-      return transaction as TransactionDetails;
+    if (txItemsError) {
+      console.error('Error fetching transaction_items:', txItemsError);
+      return transaction as unknown as TransactionDetails;
     }
-
-    const items = history
-      .map(h => h.items)
-      .filter(item => item !== null) as any[];
 
     return {
       ...transaction,
-      items
-    } as TransactionDetails;
+      items: (txItems ?? []) as unknown as TransactionDetails['items'],
+    } as unknown as TransactionDetails;
   }
 };

@@ -41,6 +41,7 @@ export default function POSPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+  const [isCreditConfirmOpen, setIsCreditConfirmOpen] = useState(false);
 
   // Prevent hydration mismatch for persisted store by deferring render slightly
   const [mounted, setMounted] = useState(false);
@@ -70,6 +71,12 @@ export default function POSPage() {
   };
 
   const handleCheckout = async () => {
+    // Confirm before processing credit/debt sales
+    if (paymentMethod === 'Credit' && !isCreditConfirmOpen) {
+      setIsCreditConfirmOpen(true);
+      return;
+    }
+
     try {
       const res = await checkout();
       if (res.success) {
@@ -196,6 +203,20 @@ export default function POSPage() {
         onConfirm={() => {
           clearCart();
           toast.success("تم إفراغ السلة");
+        }}
+      />
+
+      <ConfirmDialog
+        open={isCreditConfirmOpen}
+        onOpenChange={setIsCreditConfirmOpen}
+        title="تأكيد بيع آجل"
+        description={`سيتم تسجيل مبلغ ${(total - paidAmount).toLocaleString()} ج.م كدين على حساب العميل. هل أنت متأكد؟`}
+        confirmLabel="تأكيد البيع الآجل"
+        cancelLabel="تراجع"
+        destructive={false}
+        onConfirm={() => {
+          setIsCreditConfirmOpen(false);
+          handleCheckout();
         }}
       />
     </div>

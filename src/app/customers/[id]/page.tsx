@@ -24,6 +24,7 @@ import { TransactionDetailsDrawer } from "@/components/management/TransactionDet
 import { PaymentModal } from "@/components/debts/PaymentModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { customerService } from "@/lib/services/customerService";
+import { debtService } from "@/lib/services/debtService";
 
 export default function CustomerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -94,13 +95,7 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
     setSubmittingPayment(true);
     
     try {
-      const { data, error } = await supabase.rpc('pay_customer_debt', {
-        p_customer_id: id,
-        p_amount: amount,
-      });
-
-      if (error) throw error;
-      if (data && !data.success) throw new Error(data.message);
+      await debtService.processPayment(id, amount, paymentMethod as 'Cash' | 'Card' | 'Transfer');
 
       toast.success("تم تسجيل الدفعة بنجاح");
       setPaymentAmount("");
@@ -130,12 +125,7 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
     e.preventDefault();
     setSubmittingEdit(true);
     try {
-      const { error } = await supabase
-        .from('customers')
-        .update(editForm)
-        .eq('id', id);
-
-      if (error) throw error;
+      await customerService.update(id, editForm);
 
       toast.success("تم تحديث البيانات بنجاح");
       setOpenEditDialog(false);

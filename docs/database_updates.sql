@@ -1,163 +1,92 @@
--- Create a function to process sales returns atomically
-CREATE OR REPLACE FUNCTION process_return(p_barcode text, p_reason text)
-RETURNS json
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_item record;
-  v_transaction_id uuid;
-BEGIN
-  -- Find the sold item
-  SELECT * INTO v_item FROM items WHERE barcode = p_barcode AND status = 'Sold' FOR UPDATE;
-  
-  IF NOT FOUND THEN
-    RETURN json_build_object('success', false, 'message', 'القطعة غير موجودة أو ليست في حالة مباع');
-  END IF;
+-- =============================================
+-- RT PRO Database Security & Performance Fixes
+-- Applied: 2026-03-28
+-- =============================================
 
-  -- Update item status back to In-Stock
-  UPDATE items 
-  SET status = 'In-Stock', customer_id = NULL, sold_date = NULL 
-  WHERE barcode = p_barcode;
+-- ▬▬▬ 1. DROPPED DUPLICATE FUNCTIONS ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+-- Removed old/duplicate versions that could cause wrong function calls
+-- Migration: drop_duplicate_functions
 
-  -- Insert history record
-  INSERT INTO item_history (item_barcode, action, details)
-  VALUES (p_barcode, 'Returned', 'تم الإرجاع لسبب: ' || p_reason);
+DROP FUNCTION IF EXISTS public.get_finance_stats();
+DROP FUNCTION IF EXISTS public.pay_customer_debt(uuid, numeric, character varying);
+DROP FUNCTION IF EXISTS public.pay_supplier_debt(uuid, numeric, character varying);
+DROP FUNCTION IF EXISTS public.record_supplier_payment(uuid, numeric, text);
 
-  -- Handle Customer Balance (if applicable)
-  IF v_item.customer_id IS NOT NULL THEN
-    UPDATE customers 
-    SET balance = balance - v_item.selling_price 
-    WHERE id = v_item.customer_id;
-  END IF;
 
-  RETURN json_build_object('success', true, 'message', 'تم الإرجاع بنجاح');
-EXCEPTION
-  WHEN OTHERS THEN
-    RETURN json_build_object('success', false, 'message', SQLERRM);
-END;
-$$;
+-- ▬▬▬ 2. FIXED RLS OPEN SELECT POLICIES ▬▬▬▬▬▬▬▬▬▬▬▬
+-- Changed items/products/profiles SELECT from `true` to `authenticated`
+-- Migration: fix_rls_security_policies
 
--- Create a function to get low stock count
-CREATE OR REPLACE FUNCTION get_low_stock_count(p_threshold int DEFAULT 5)
-RETURNS int
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_count int;
-BEGIN
-  SELECT COUNT(*) INTO v_count
-  FROM (
-    SELECT product_id, COUNT(*) as stock_count
-    FROM items
-    WHERE status = 'In-Stock'
-    GROUP BY product_id
-    HAVING COUNT(*) < p_threshold
-  ) AS low_stock_products;
-  
-  RETURN v_count;
-END;
-$$;
+-- items
+DROP POLICY IF EXISTS "Everyone can select items" ON public.items;
+CREATE POLICY "Everyone can select items" ON public.items
+  FOR SELECT USING ((select auth.role()) = 'authenticated');
 
--- Create a function to get finance stats efficiently
-CREATE OR REPLACE FUNCTION get_finance_stats()
-RETURNS json
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_revenue numeric;
-  v_profit numeric;
-  v_inventory_value numeric;
-  v_customer_debt numeric;
-  v_supplier_debt numeric;
-BEGIN
-  -- Revenue from transactions
-  SELECT COALESCE(SUM(total), 0) INTO v_revenue FROM transactions WHERE type = 'Sale';
-  
-  -- Profit from sold items
-  SELECT COALESCE(SUM(selling_price - cost_price), 0) INTO v_profit FROM items WHERE status = 'Sold';
-  
-  -- Inventory value
-  SELECT COALESCE(SUM(cost_price), 0) INTO v_inventory_value FROM items WHERE status = 'In-Stock';
-  
-  -- Customer debt
-  SELECT COALESCE(SUM(balance), 0) INTO v_customer_debt FROM customers;
-  
-  -- Supplier debt
-  SELECT COALESCE(SUM(balance), 0) INTO v_supplier_debt FROM suppliers;
-  
-  RETURN json_build_object(
-    'revenue', v_revenue,
-    'profit', v_profit,
-    'inventoryValue', v_inventory_value,
-    'customerDebt', v_customer_debt,
-    'supplierDebt', v_supplier_debt
-  );
-END;
-$$;
+-- products
+DROP POLICY IF EXISTS "Everyone can select products" ON public.products;
+CREATE POLICY "Everyone can select products" ON public.products
+  FOR SELECT USING ((select auth.role()) = 'authenticated');
 
--- Create a function to process customer debt payment
-CREATE OR REPLACE FUNCTION pay_customer_debt(p_customer_id uuid, p_amount numeric, p_payment_method text)
-RETURNS json
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_current_balance numeric;
-BEGIN
-  -- Verify customer exists and lock row
-  SELECT balance INTO v_current_balance FROM customers WHERE id = p_customer_id FOR UPDATE;
-  
-  IF NOT FOUND THEN
-    RETURN json_build_object('success', false, 'message', 'العميل غير موجود');
-  END IF;
+-- profiles
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles
+  FOR SELECT USING ((select auth.role()) = 'authenticated');
 
-  -- Update balance
-  UPDATE customers 
-  SET balance = balance - p_amount 
-  WHERE id = p_customer_id;
 
-  -- Insert transaction record
-  INSERT INTO transactions (type, total, payment_method, customer_id, details)
-  VALUES ('Income', p_amount, p_payment_method, p_customer_id, 'تسديد دفعة من مديونية العميل');
+-- ▬▬▬ 3. FIXED search_path ON ALL FUNCTIONS ▬▬▬▬▬▬▬▬▬
+-- Prevents search_path injection attacks
+-- Migration: fix_function_search_path
 
-  RETURN json_build_object('success', true, 'message', 'تم تسديد الدفعة بنجاح', 'new_balance', v_current_balance - p_amount);
-EXCEPTION
-  WHEN OTHERS THEN
-    RETURN json_build_object('success', false, 'message', SQLERRM);
-END;
-$$;
+ALTER FUNCTION public.process_return(text, text, text) SET search_path = '';
+ALTER FUNCTION public.get_debt_summary() SET search_path = '';
+ALTER FUNCTION public.process_sale(text[], numeric, text, uuid, numeric) SET search_path = '';
+ALTER FUNCTION public.pay_customer_debt(uuid, numeric) SET search_path = '';
+ALTER FUNCTION public.pay_supplier_debt(uuid, numeric, text) SET search_path = '';
+ALTER FUNCTION public.get_inventory_stats() SET search_path = '';
+ALTER FUNCTION public.get_finance_stats(timestamp with time zone) SET search_path = '';
+ALTER FUNCTION public.get_low_stock_count(integer) SET search_path = '';
+ALTER FUNCTION public.is_manager() SET search_path = '';
+ALTER FUNCTION public.record_supplier_purchase(uuid, numeric, text) SET search_path = '';
 
--- Create a function to process supplier debt payment
-CREATE OR REPLACE FUNCTION pay_supplier_debt(p_supplier_id uuid, p_amount numeric, p_payment_method text)
-RETURNS json
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_current_balance numeric;
-BEGIN
-  -- Verify supplier exists and lock row
-  SELECT balance INTO v_current_balance FROM suppliers WHERE id = p_supplier_id FOR UPDATE;
-  
-  IF NOT FOUND THEN
-    RETURN json_build_object('success', false, 'message', 'المورد غير موجود');
-  END IF;
 
-  -- Update balance
-  UPDATE suppliers 
-  SET balance = balance - p_amount 
-  WHERE id = p_supplier_id;
+-- ▬▬▬ 4. OPTIMIZED ALL RLS POLICIES (InitPlan) ▬▬▬▬▬▬
+-- Changed auth.uid()/auth.role() → (select auth.uid())/(select auth.role())
+-- This prevents re-evaluation per row, massive performance improvement
+-- Migration: optimize_rls_initplan
 
-  -- Insert transaction record
-  INSERT INTO transactions (type, total, payment_method, details)
-  VALUES ('Expense', p_amount, p_payment_method, 'تسديد دفعة لمورد: ' || (SELECT name FROM suppliers WHERE id = p_supplier_id));
+-- See migration file for full details of all 30+ policies updated
 
-  RETURN json_build_object('success', true, 'message', 'تم تسديد الدفعة للمورد بنجاح', 'new_balance', v_current_balance - p_amount);
-EXCEPTION
-  WHEN OTHERS THEN
-    RETURN json_build_object('success', false, 'message', SQLERRM);
-END;
-$$;
+
+-- ▬▬▬ 5. DROPPED DUPLICATE INDEXES ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+-- Migration: drop_duplicate_indexes
+
+DROP INDEX IF EXISTS public.idx_item_history_barcode;
+DROP INDEX IF EXISTS public.idx_transactions_cust;
+DROP INDEX IF EXISTS public.idx_transactions_supp;
+
+
+-- ▬▬▬ 6. ADDED MISSING FK INDEXES ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+-- Migration: add_missing_fk_indexes
+
+CREATE INDEX IF NOT EXISTS idx_activity_logs_actor_id ON public.activity_logs (actor_id);
+CREATE INDEX IF NOT EXISTS idx_items_created_by ON public.items (created_by);
+CREATE INDEX IF NOT EXISTS idx_items_sold_by ON public.items (sold_by);
+CREATE INDEX IF NOT EXISTS idx_items_returned_by ON public.items (returned_by);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications (user_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_items_barcode ON public.transaction_items (barcode);
+
+
+-- ▬▬▬ 7. FIXED get_inventory_stats LOGIC ▬▬▬▬▬▬▬▬▬▬▬▬
+-- Fixed low_stock_count subquery that was returning NULL
+-- Migration: fix_get_inventory_stats
+
+-- See migration file for full function replacement
+
+
+-- =============================================
+-- MANUAL STEPS (Dashboard):
+-- 1. Enable Leaked Password Protection
+--    https://supabase.com/docs/guides/auth/password-security
+-- 2. Upgrade Postgres version
+--    https://supabase.com/docs/guides/platform/upgrading
+-- =============================================

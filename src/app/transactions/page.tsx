@@ -92,7 +92,9 @@ export default function TransactionsPage() {
       case 'Sale': return <ArrowUpRight className="w-5 h-5 text-emerald-500" />;
       case 'Return': return <RefreshCcw className="w-5 h-5 text-amber-500" />;
       case 'Expense': return <ArrowDownRight className="w-5 h-5 text-red-500" />;
+      case 'SupplierPayment': return <ArrowDownRight className="w-5 h-5 text-orange-500" />;
       case 'Income': return <ArrowUpRight className="w-5 h-5 text-blue-500" />;
+      case 'Payment': return <ArrowUpRight className="w-5 h-5 text-cyan-500" />;
       default: return <Receipt className="w-5 h-5 text-white/50" />;
     }
   };
@@ -101,8 +103,10 @@ export default function TransactionsPage() {
     switch(type) {
       case 'Sale': return 'عملية بيع';
       case 'Return': return 'مرتجع';
-      case 'Expense': return 'مصروفات / سداد مورد';
-      case 'Income': return 'إيراد / تحصيل عميل';
+      case 'Expense': return 'مصروفات';
+      case 'SupplierPayment': return 'سداد مورد';
+      case 'Income': return 'إيراد';
+      case 'Payment': return 'تحصيل مديونية';
       default: return type;
     }
   };
@@ -112,7 +116,9 @@ export default function TransactionsPage() {
       case 'Sale': return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500';
       case 'Return': return 'bg-amber-500/10 border-amber-500/20 text-amber-500';
       case 'Expense': return 'bg-red-500/10 border-red-500/20 text-red-500';
+      case 'SupplierPayment': return 'bg-orange-500/10 border-orange-500/20 text-orange-500';
       case 'Income': return 'bg-blue-500/10 border-blue-500/20 text-blue-500';
+      case 'Payment': return 'bg-cyan-500/10 border-cyan-500/20 text-cyan-500';
       default: return 'bg-white/5 border-white/10 text-white/50';
     }
   };
@@ -196,8 +202,8 @@ export default function TransactionsPage() {
 
                     <div className="flex flex-col items-end gap-1 w-full md:w-auto mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-white/5">
                       <div className="flex items-baseline gap-1">
-                        <span className={`text-2xl font-black ${(t as any).type === 'Return' || (t as any).type === 'Expense' ? 'text-red-500' : 'text-emerald-500'}`}>
-                          {(t as any).type === 'Return' || (t as any).type === 'Expense' ? '-' : '+'}{Number(t.total).toLocaleString()}
+                        <span className={`text-2xl font-black ${t.type === 'Return' || t.type === 'Expense' || t.type === 'SupplierPayment' ? 'text-red-500' : 'text-emerald-500'}`}>
+                          {t.type === 'Return' || t.type === 'Expense' || t.type === 'SupplierPayment' ? '-' : '+'}{Number(t.total).toLocaleString()}
                         </span>
                         <span className="text-xs font-bold text-white/40">ج.م</span>
                       </div>

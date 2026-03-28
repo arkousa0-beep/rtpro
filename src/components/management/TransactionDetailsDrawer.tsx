@@ -86,7 +86,7 @@ export function TransactionDetailsDrawer({
               #{transactionId.slice(0, 8)}
             </Badge>
             <Badge className="bg-green-500/10 text-green-500 border-green-500/20 px-3 py-1 font-black">
-              {transaction?.type === 'Sale' ? 'بيع' : transaction?.type || '...'}
+              {({'Sale': 'بيع', 'Return': 'مرتجع', 'Payment': 'تحصيل', 'SupplierPayment': 'سداد مورد', 'Expense': 'مصروفات', 'Exchange': 'استبدال'} as Record<string, string>)[transaction?.type ?? ''] ?? transaction?.type ?? '...'}
             </Badge>
           </div>
         </DrawerHeader>
@@ -176,7 +176,7 @@ export function TransactionDetailsDrawer({
                         </div>
                         <div className="text-left bg-white/5 py-2 px-4 rounded-xl border border-white/5">
                           <p className="text-indigo-400 font-black text-sm">
-                            {(item as any).selling_price?.toLocaleString()} <span className="text-[10px] opacity-40">ج.م</span>
+                            {Number(item.price ?? 0).toLocaleString()} <span className="text-[10px] opacity-40">ج.م</span>
                           </p>
                         </div>
                       </div>
@@ -191,13 +191,23 @@ export function TransactionDetailsDrawer({
               <div className="glass p-6 rounded-[2rem] border-white/5 bg-indigo-500/5">
                 <div className="space-y-3">
                    <div className="flex justify-between items-center text-white/40 font-black text-xs px-2">
-                      <span>المجموع الفرعي</span>
+                      <span>الإجمالي</span>
                       <span>{transaction.total?.toLocaleString()} ج.م</span>
                    </div>
-                   <div className="flex justify-between items-center text-white/40 font-black text-xs px-2">
-                      <span>الخصم</span>
-                      <span>0 ج.م</span>
-                   </div>
+                   {transaction.method === 'Debt' && (
+                     <>
+                       <div className="flex justify-between items-center text-emerald-400/70 font-black text-xs px-2">
+                           <span>المدفوع</span>
+                           <span>{Number((transaction as any).paid_amount ?? 0).toLocaleString()} ج.م</span>
+                       </div>
+                       {Number(transaction.total) - Number((transaction as any).paid_amount ?? 0) > 0 && (
+                         <div className="flex justify-between items-center text-red-400/70 font-black text-xs px-2">
+                             <span>المتبقي (آجل)</span>
+                             <span>{(Number(transaction.total) - Number((transaction as any).paid_amount ?? 0)).toLocaleString()} ج.م</span>
+                         </div>
+                       )}
+                     </>
+                   )}
                    <div className="h-px bg-white/5 mx-2 my-2" />
                    <div className="flex justify-between items-center px-2">
                       <span className="text-white font-black text-lg">الإجمالي</span>

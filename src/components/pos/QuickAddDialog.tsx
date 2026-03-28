@@ -10,59 +10,91 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePOSStore } from "@/store/usePOSStore";
 import { toast } from "sonner";
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface SearchResultItem {
+  barcode: string;
+  selling_price: number;
+  products: { name: string };
+}
+
+interface GroupedProduct {
+  name: string;
+  items: SearchResultItem[];
+  count: number;
+}
+
+// ─── Component ──────────────────────────────────────────────────────────────
+
 export function QuickAddDialog() {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [results, setResults] = useState<any[]>([]);
+  const [grouped, setGrouped] = useState<GroupedProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const { addItem, cart } = usePOSStore();
 
   useEffect(() => {
     if (searchQuery.length > 2) {
-      const delaySearch = setTimeout(() => {
-        handleSearch();
-      }, 500);
+      const delaySearch = setTimeout(() => handleSearch(), 500);
       return () => clearTimeout(delaySearch);
     } else {
-      setResults([]);
+      setGrouped([]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   const handleSearch = async () => {
     setLoading(true);
-    // Find items that are in-stock and whose product name matches the search query.
-    // Using an inner join to filter by product name efficiently.
     const { data, error } = await supabase
       .from('items')
-      .select(`
-        barcode,
-        selling_price,
-        products!inner(name)
-      `)
+      .select(`barcode, selling_price, products!inner(name)`)
       .eq('status', 'In-Stock')
       .ilike('products.name', `%${searchQuery}%`)
-      .limit(10); // Show top 10 results to keep it fast
+      .limit(50);
 
     if (error) {
       console.error("Error searching items:", error);
+      setGrouped([]);
     } else {
-      // Filter out items already in the cart
-      const cartBarcodes = new Set(cart.map((item: any) => item.barcode));
-      setResults(data?.filter(item => !cartBarcodes.has(item.barcode)) || []);
+      const cartBarcodes = new Set(cart.map((item) => item.barcode));
+      const available = (data ?? []).filter(
+        (item) => !cartBarcodes.has(item.barcode)
+      ) as unknown as SearchResultItem[];
+
+      // Group by product name
+      const groupMap = new Map<string, SearchResultItem[]>();
+      for (const item of available) {
+        const name = item.products?.name ?? 'غير معروف';
+        if (!groupMap.has(name)) groupMap.set(name, []);
+        groupMap.get(name)!.push(item);
+      }
+
+      setGrouped(
+        Array.from(groupMap.entries()).map(([name, items]) => ({
+          name,
+          items,
+          count: items.length,
+        }))
+      );
     }
     setLoading(false);
   };
 
-  const handleQuickAdd = async (barcode: string) => {
+  const handleQuickAdd = async (barcode: string, productName: string) => {
     const res = await addItem(barcode);
     if (res.success) {
-      toast.success("تم إضافة الصنف بنجاح");
-      setSearchQuery(""); // clear search
-      if (results.length === 1) {
-        setOpen(false); // close if it was the last result
-      } else {
-        // remove the added item from the results list
-        setResults(results.filter(r => r.barcode !== barcode));
+      toast.success(`تم إضافة ${productName}`);
+      // Remove added item from grouped results
+      setGrouped(prev =>
+        prev.map(g => ({
+          ...g,
+          items: g.items.filter(i => i.barcode !== barcode),
+          count: g.items.filter(i => i.barcode !== barcode).length,
+        })).filter(g => g.count > 0)
+      );
+      if (grouped.length <= 1 && grouped[0]?.count <= 1) {
+        setOpen(false);
+        setSearchQuery("");
       }
     } else {
       toast.error(res.message || "حدث خطأ");
@@ -70,7 +102,7 @@ export function QuickAddDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSearchQuery(""); }}>
       <DialogTrigger asChild>
         <Button
           variant="outline"
@@ -107,20 +139,24 @@ export function QuickAddDialog() {
               <div className="flex justify-center items-center h-full">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
-            ) : results.length > 0 ? (
+            ) : grouped.length > 0 ? (
               <div className="space-y-2">
-                {results.map((item) => (
-                  <div key={item.barcode} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-primary/30 transition-colors">
+                {grouped.map((group) => (
+                  <div key={group.name} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-primary/30 transition-colors">
                     <div className="flex-1 text-right">
-                      <p className="font-bold text-white text-sm">{item.products.name}</p>
+                      <p className="font-bold text-white text-sm">{group.name}</p>
                       <div className="flex items-center gap-2 mt-1 justify-end">
-                        <span className="text-[10px] font-mono text-white/40">{item.barcode}</span>
-                        <span className="text-xs font-black text-primary">{item.selling_price} ج.م</span>
+                        <span className="text-[10px] text-white/40 bg-white/5 px-2 py-0.5 rounded-md font-bold">
+                          {group.count} قطعة متاحة
+                        </span>
+                        <span className="text-xs font-black text-primary">
+                          {group.items[0].selling_price} ج.م
+                        </span>
                       </div>
                     </div>
                     <Button
                       size="sm"
-                      onClick={() => handleQuickAdd(item.barcode)}
+                      onClick={() => handleQuickAdd(group.items[0].barcode, group.name)}
                       className="ml-3 h-10 w-10 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-black transition-all"
                     >
                       <Plus className="w-5 h-5" />

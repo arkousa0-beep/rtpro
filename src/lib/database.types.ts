@@ -90,7 +90,7 @@ export interface Item {
   customers?: Customer
 }
 
-export type TransactionType = 'Sale' | 'Return' | 'Exchange' | 'Payment' | 'SupplierPayment'
+export type TransactionType = 'Sale' | 'Return' | 'Exchange' | 'Payment' | 'SupplierPayment' | 'Expense' | 'Income'
 export type PaymentMethod = 'Cash' | 'Debt' | 'Card' | 'Transfer'
 
 export interface Transaction {
@@ -276,7 +276,9 @@ export type Database = {
         }>
       }
       get_finance_stats: {
-        Args: Record<string, never>
+        Args: {
+          p_since?: string
+        }
         Returns: {
           revenue: number
           profit: number
