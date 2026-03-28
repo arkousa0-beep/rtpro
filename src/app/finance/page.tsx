@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { exportToPDF } from "@/lib/services/exportService";
+import { Button } from "@/components/ui/button";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -15,7 +18,8 @@ import {
   Wallet,
   Clock,
   Store,
-  ArrowUpRight
+  ArrowUpRight,
+  FileDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -137,6 +141,27 @@ export default function FinancePage() {
     setLoading(false);
   }
 
+  // Realtime: auto-refresh when transactions change
+  useRealtimeSubscription({
+    table: 'transactions',
+    event: '*',
+    onData: () => fetchStats(),
+  });
+
+  const handleExportPDF = () => {
+    if (!stats) return;
+    const columns = ['البيان', 'القيمة'];
+    const rows = [
+      ['إجمالي الإيرادات', `${stats.revenue.toLocaleString()} ج.م`],
+      ['صافي الأرباح', `${stats.profit.toLocaleString()} ج.م`],
+      ['قيمة المخزون', `${stats.inventoryValue.toLocaleString()} ج.م`],
+      ['مديونيات العملاء', `${stats.customerDebt.toLocaleString()} ج.م`],
+      ['مديونيات الموردين', `${stats.supplierDebt.toLocaleString()} ج.م`],
+    ];
+    const period = timeRange === 'today' ? 'اليوم' : timeRange === 'week' ? 'آخر 7 أيام' : timeRange === 'month' ? 'آخر 30 يوم' : 'كل الأوقات';
+    exportToPDF('التقرير المالي', columns, rows, { subtitle: `الفترة: ${period}` });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -158,7 +183,16 @@ export default function FinancePage() {
           </h2>
           <p className="text-white/40 text-sm font-medium">متابعة الأداء المالي والأرباح</p>
         </div>
-        
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExportPDF}
+            className="h-12 px-4 rounded-2xl border-white/10 bg-red-500/10 text-red-400 hover:bg-red-500/20 gap-2 font-black"
+          >
+            <FileDown className="w-4 h-4" />
+            PDF
+          </Button>
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="w-[140px] h-12 bg-white/5 border-white/10 text-white rounded-2xl glass font-bold">
             <Clock className="w-4 h-4 ml-2 text-primary" />
@@ -171,6 +205,7 @@ export default function FinancePage() {
             <SelectItem value="all">كل الأوقات</SelectItem>
           </SelectContent>
         </Select>
+        </div>
       </div>
 
       {/* Main Grid */}

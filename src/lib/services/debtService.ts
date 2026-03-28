@@ -48,6 +48,7 @@ export const debtService = {
     const { data, error } = await supabase
       .from('customers')
       .select('id, name, phone, balance, created_at')
+      .is('deleted_at', null)
       .gt('balance', 0)
       .order('balance', { ascending: false });
     if (error) throw error;

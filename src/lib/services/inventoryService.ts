@@ -23,7 +23,14 @@ export const inventoryService = {
     endDate?: string;
     dateType?: 'Add' | 'Sale' | 'Return';
     search?: string;
+    page?: number;
+    pageSize?: number;
   }) {
+    const page = filters.page || 1;
+    const pageSize = filters.pageSize || 50;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
     let query = supabase
       .from('items')
       .select(`
@@ -32,7 +39,7 @@ export const inventoryService = {
         created_by_profile:created_by(full_name),
         sold_by_profile:sold_by(full_name),
         returned_by_profile:returned_by(full_name)
-      `)
+      `, { count: 'exact' })
       .eq('product_id', productId);
 
     if (filters.status && filters.status !== 'All') {
@@ -55,9 +62,12 @@ export const inventoryService = {
       query = query.lte(col, filters.endDate);
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(from, to);
+      
     if (error) throw error;
-    return data;
+    return { data, count };
   },
 
   async getItemDetails(barcode: string) {
@@ -81,6 +91,29 @@ export const inventoryService = {
 
   async insertItems(itemsToInsert: Partial<Item>[]) {
     const { data: { user } } = await supabase.auth.getUser();
+
+    // 1. Check for duplicate barcodes within the batch itself
+    const barcodes = itemsToInsert.map(i => i.barcode).filter(Boolean) as string[];
+    const uniqueBarcodes = new Set(barcodes);
+    if (uniqueBarcodes.size !== barcodes.length) {
+      const dupes = barcodes.filter((b, i) => barcodes.indexOf(b) !== i);
+      throw new Error(`يوجد باركود مكرر في القائمة: ${[...new Set(dupes)].join(', ')}`);
+    }
+
+    // 2. Check if any barcode already exists in the database
+    if (barcodes.length > 0) {
+      const { data: existing } = await supabase
+        .from('items')
+        .select('barcode')
+        .in('barcode', barcodes);
+
+      if (existing && existing.length > 0) {
+        const existingBarcodes = existing.map(e => e.barcode).join(', ');
+        throw new Error(`الباركود التالي موجود بالفعل في المخزون: ${existingBarcodes}`);
+      }
+    }
+
+    // 3. Insert items
     const items = itemsToInsert.map(item => ({
       ...item,
       created_by: item.created_by || user?.id

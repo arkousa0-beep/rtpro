@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase/client";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { 
   Package, 
   TrendingUp, 
@@ -33,69 +34,79 @@ export default function Home() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        // Get User Info
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-          setProfile(profileData);
-        }
-
-        // 1. Inventory Stats from RPC
-        const inventoryStats = await productService.getInventoryStats();
-
-        // 2. Customers
-        const { count: customersCount } = await supabase
-          .from('customers')
-          .select('*', { count: 'exact', head: true });
-
-        // 3. Today's & Yesterday's Sales (for real growth calculation)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        const [todayRes, yesterdayRes] = await Promise.all([
-          supabase
-            .from('transactions')
-            .select('total')
-            .eq('type', 'Sale')
-            .gte('created_at', today.toISOString()),
-          supabase
-            .from('transactions')
-            .select('total')
-            .eq('type', 'Sale')
-            .gte('created_at', yesterday.toISOString())
-            .lt('created_at', today.toISOString()),
-        ]);
-
-        const todayTotal = todayRes.data?.reduce((acc, curr) => acc + Number(curr.total), 0) || 0;
-        const yesterdayTotal = yesterdayRes.data?.reduce((acc, curr) => acc + Number(curr.total), 0) || 0;
-
-        setStats({
-          totalItems: Number(inventoryStats.total_items) || 0,
-          lowStock: Number(inventoryStats.low_stock_count) || 0,
-          todaySales: todayTotal,
-          yesterdaySales: yesterdayTotal,
-          customers: customersCount || 0,
-          totalCost: Number(inventoryStats.total_cost_value) || 0,
-          totalSelling: Number(inventoryStats.total_selling_value) || 0
-        });
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      } finally {
-        setLoading(false);
+  async function fetchStats() {
+    try {
+      // Get User Info
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        setProfile(profileData);
       }
-    }
 
+      // 1. Inventory Stats from RPC
+      const inventoryStats = await productService.getInventoryStats();
+
+      // 2. Customers
+      const { count: customersCount } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true });
+
+      // 3. Today's & Yesterday's Sales (for real growth calculation)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const [todayRes, yesterdayRes] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('total')
+          .eq('type', 'Sale')
+          .gte('created_at', today.toISOString()),
+        supabase
+          .from('transactions')
+          .select('total')
+          .eq('type', 'Sale')
+          .gte('created_at', yesterday.toISOString())
+          .lt('created_at', today.toISOString()),
+      ]);
+
+      const todayTotal = todayRes.data?.reduce((acc, curr) => acc + Number(curr.total), 0) || 0;
+      const yesterdayTotal = yesterdayRes.data?.reduce((acc, curr) => acc + Number(curr.total), 0) || 0;
+
+      setStats({
+        totalItems: Number(inventoryStats.total_items) || 0,
+        lowStock: Number(inventoryStats.low_stock_count) || 0,
+        todaySales: todayTotal,
+        yesterdaySales: yesterdayTotal,
+        customers: customersCount || 0,
+        totalCost: Number(inventoryStats.total_cost_value) || 0,
+        totalSelling: Number(inventoryStats.total_selling_value) || 0
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
     fetchStats();
   }, []);
+
+  // Realtime: auto-refresh stats when transactions change
+  useRealtimeSubscription({
+    table: 'transactions',
+    event: '*',
+    onData: () => {
+      // Re-fetch stats silently without showing loading
+      fetchStats();
+    },
+  });
   const cards = [
     { title: "مبيعات اليوم", value: `${stats.todaySales}`, unit: "ج.م", icon: TrendingUp, color: "text-primary", bg: "bg-primary/10", href: "/transactions", permission: "transactions" },
     { title: "المخزن", value: stats.totalItems, unit: "قطع", icon: Package, color: "text-amber-400", bg: "bg-amber-400/10", href: "/inventory", permission: "inventory" },

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, RefreshCw, TrendingDown, TrendingUp, Minus, ShoppingBag, Search, Receipt } from "lucide-react";
+import { Loader2, RefreshCw, TrendingDown, TrendingUp, Minus, ShoppingBag, Search, Receipt, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { exportToPDF } from "@/lib/services/exportService";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDebts } from "@/hooks/useDebts";
@@ -174,8 +175,29 @@ export default function DebtsPage() {
         </div>
       )}
 
-       {/* Refresh Button */}
-      <div className="flex justify-center pt-4 pb-10">
+       {/* Export & Refresh */}
+      <div className="flex justify-center gap-3 pt-4 pb-10">
+        <Button
+          variant="outline"
+          onClick={() => {
+            const columns = ['العميل', 'المبلغ', 'التاريخ'];
+            const rows = filteredDeferred.map(d => [
+              d.customers?.name ?? 'غير محدد',
+              Number(d.total).toLocaleString(),
+              new Date(d.created_at).toLocaleDateString('ar-EG'),
+            ]);
+            exportToPDF('تقرير المديونيات', columns, rows, {
+              summary: [
+                { label: 'إجمالي المديونيات', value: `${(summary?.total_customer_debt ?? 0).toLocaleString()} ج.م` },
+                { label: 'عدد الفواتير', value: String(deferredSales.length) },
+              ]
+            });
+          }}
+          className="rounded-2xl border-white/10 bg-red-500/10 text-red-400 hover:text-red-300 hover:bg-red-500/20 gap-2"
+        >
+          <FileDown className="w-4 h-4" />
+          تقرير PDF
+        </Button>
         <Button
           variant="outline"
           onClick={refresh}

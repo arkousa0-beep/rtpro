@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { ServiceWorkerRegister } from "@/components/layout/ServiceWorkerRegister";
+import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
 
@@ -40,6 +41,7 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" className="dark">
       <body className={cn(cairo.className, "min-h-screen bg-background text-foreground antialiased selection:bg-primary/30")}>
         <ServiceWorkerRegister />
+        <OfflineIndicator />
         
         <AppShell>
           {children}

@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Transaction } from "@/lib/database.types";
 import { ManagePageLayout } from "@/components/management/ManagePageLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowDownRight, ArrowUpRight, Receipt, RefreshCcw, Loader2, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ArrowDownRight, ArrowUpRight, Receipt, RefreshCcw, Loader2, Calendar, ChevronRight, ChevronLeft, FileDown, FileSpreadsheet } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { TransactionDetailsDrawer } from "@/components/management/TransactionDetailsDrawer";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { exportToPDF, exportToExcel } from "@/lib/services/exportService";
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -16,21 +19,67 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 50;
 
   useEffect(() => {
     fetchTransactions();
-  }, []);
+  }, [page]);
 
   async function fetchTransactions() {
     setLoading(true);
-    const { data, error } = await supabase
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, count, error } = await supabase
       .from('transactions')
-      .select('*, customers(name)')
-      .order('created_at', { ascending: false });
+      .select('*, customers(name)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to);
       
     if (data) setTransactions(data as any[]);
+    if (count !== null) setTotalPages(Math.ceil(count / pageSize) || 1);
     setLoading(false);
   }
+
+  // Realtime: auto-refresh on new transactions
+  useRealtimeSubscription({
+    table: 'transactions',
+    event: '*',
+    onData: () => fetchTransactions(),
+  });
+
+  const handleExportPDF = () => {
+    const columns = ['النوع', 'العميل', 'المبلغ', 'طريقة الدفع', 'التاريخ'];
+    const rows = filtered.map(t => {
+      const type = t.type as string;
+      return [
+        type === 'Sale' ? 'بيع' : type === 'Return' ? 'مرتجع' : type === 'Expense' ? 'مصروفات' : 'إيراد',
+        (t as any).customers?.name || '-',
+        Number(t.total).toLocaleString(),
+        t.method === 'Cash' ? 'كاش' : t.method === 'Card' ? 'فيزا' : t.method === 'Debt' ? 'آجل' : t.method,
+        new Date(t.created_at).toLocaleDateString('ar-EG'),
+      ];
+    });
+    exportToPDF('تقرير المعاملات', columns, rows);
+  };
+
+  const handleExportExcel = () => {
+    const columns = ['النوع', 'العميل', 'المبلغ', 'طريقة الدفع', 'التاريخ', 'رقم المعاملة'];
+    const rows = filtered.map(t => {
+      const type = t.type as string;
+      return [
+        type === 'Sale' ? 'بيع' : type === 'Return' ? 'مرتجع' : type === 'Expense' ? 'مصروفات' : 'إيراد',
+        (t as any).customers?.name || '-',
+        Number(t.total),
+        t.method === 'Cash' ? 'كاش' : t.method === 'Card' ? 'فيزا' : t.method === 'Debt' ? 'آجل' : t.method,
+        new Date(t.created_at).toLocaleDateString('ar-EG'),
+        t.id,
+      ];
+    });
+    exportToExcel('تقرير المعاملات', columns, rows);
+  };
 
   const filtered = transactions.filter(t => 
     t.id.includes(search) || 
@@ -89,7 +138,18 @@ export default function TransactionsPage() {
       isLoading={loading}
       iconColor="text-indigo-500"
       buttonColor="bg-indigo-600"
-      addDialogContent={<div className="text-center p-8 text-white/50">سيتم توفير ميزة طباعة التقارير قريباً</div>}
+      addDialogContent={
+        <div className="flex flex-col gap-4 p-6">
+          <Button onClick={handleExportPDF} className="h-14 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-lg gap-3">
+            <FileDown className="w-6 h-6" />
+            تحميل تقرير PDF
+          </Button>
+          <Button onClick={handleExportExcel} className="h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg gap-3">
+            <FileSpreadsheet className="w-6 h-6" />
+            تحميل تقرير Excel
+          </Button>
+        </div>
+      }
     >
       <div className="grid grid-cols-1 gap-4">
         <AnimatePresence mode="wait">
@@ -166,6 +226,30 @@ export default function TransactionsPage() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
       />
+      
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-8 pb-8">
+          <Button 
+            variant="outline" 
+            className="glass border-white/5 bg-white/5 hover:bg-white/10 text-white"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1 || loading}
+          >
+            <ChevronRight className="w-5 h-5" />
+          </Button>
+          <span className="text-white/50 text-sm font-bold">
+            صفحة {page} من {totalPages}
+          </span>
+          <Button 
+            variant="outline" 
+            className="glass border-white/5 bg-white/5 hover:bg-white/10 text-white"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages || loading}
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
     </ManagePageLayout>
   );
 }

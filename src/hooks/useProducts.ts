@@ -3,6 +3,7 @@ import { productService } from '@/lib/services/productService';
 import { createProductAction, updateProductAction, deleteProductAction } from '@/app/actions/productActions';
 import { Product } from '@/lib/database.types';
 import { toast } from 'sonner';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -26,6 +27,13 @@ export function useProducts() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  // Realtime: auto-refresh when products table changes
+  useRealtimeSubscription({
+    table: 'products',
+    event: '*',
+    onData: () => fetchProducts(),
+  });
 
   const addProduct = async (newProduct: Partial<Product>) => {
     setSubmitting(true);

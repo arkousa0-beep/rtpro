@@ -7,13 +7,15 @@ import {
   UserPlus, 
   Loader2,
   Filter,
-  ArrowUpDown
+  ArrowUpDown,
+  FileSpreadsheet
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { CustomerList } from "@/components/management/CustomerList";
 import { ManagePageLayout } from "@/components/management/ManagePageLayout";
 import { useCustomers } from "@/hooks/useCustomers";
 import { cn } from "@/lib/utils";
+import { exportToExcel } from "@/lib/services/exportService";
 
 export default function CustomersPage() {
   const { customers, loading, submitting, addCustomer } = useCustomers();
@@ -164,6 +166,26 @@ export default function CustomersPage() {
               المديونية
             </Button>
           </div>
+
+          {/* Export Button */}
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const columns = ['الاسم', 'الهاتف', 'العنوان', 'الرصيد'];
+              const rows = filteredCustomers.map(c => [
+                c.name,
+                c.phone || '-',
+                c.address || '-',
+                Number(c.balance || 0),
+              ]);
+              exportToExcel('قائمة العملاء', columns, rows);
+            }}
+            className="h-8 px-4 rounded-xl border-white/10 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 gap-1.5 text-xs font-bold"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            تصدير Excel
+          </Button>
         </div>
       }
     >

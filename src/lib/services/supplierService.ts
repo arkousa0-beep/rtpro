@@ -11,13 +11,39 @@ export const supplierService = {
     const { data, error } = await supabase
       .from('suppliers')
       .select('*')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data;
   },
-
   async create(supplier: Partial<Omit<Supplier, 'id' | 'created_at'>>) {
+    // Check if a soft-deleted supplier with the same name exists
+    const { data: existingDeleted } = await supabase
+      .from('suppliers')
+      .select('id, deleted_at')
+      .eq('name', supplier.name)
+      .not('deleted_at', 'is', null)
+      .limit(1);
+
+    if (existingDeleted && existingDeleted.length > 0) {
+      // Auto-restore and update with new details
+      const idToRestore = existingDeleted[0].id;
+      const { data, error } = await supabase
+        .from('suppliers')
+        .update({ ...supplier, deleted_at: null })
+        .eq('id', idToRestore)
+        .select();
+
+      if (error) throw error;
+      if (data && data[0]) {
+        try {
+          await logActivity('UPDATE_SUPPLIER', 'suppliers', idToRestore, { notes: 'Restored automatically on recreation', name: supplier.name });
+        } catch { /* لا نوقف العملية */ }
+      }
+      return data;
+    }
+
     const { data, error } = await supabase
       .from('suppliers')
       .insert([supplier])
@@ -53,18 +79,7 @@ export const supplierService = {
   },
 
   async delete(id: string) {
-    // Check for linked items
-    const { data: items } = await supabase
-      .from('items')
-      .select('barcode')
-      .eq('supplier_id', id)
-      .limit(1);
-
-    if (items && items.length > 0) {
-      throw new Error('لا يمكن حذف المورد — لديه قطع مرتبطة به في المخزون');
-    }
-
-    // Check for outstanding balance
+    // 1. Check for outstanding balance
     const { data: supplier } = await supabase
       .from('suppliers')
       .select('balance')
@@ -75,9 +90,10 @@ export const supplierService = {
       throw new Error('لا يمكن حذف المورد — لديه رصيد مستحق غير مسدَّد');
     }
 
+    // 2. Soft delete
     const { error } = await supabase
       .from('suppliers')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
 
     if (error) throw error;
@@ -85,6 +101,16 @@ export const supplierService = {
     try {
       await logActivity('DELETE_SUPPLIER', 'suppliers', id);
     } catch { /* لا نوقف العملية إذا فشل التسجيل */ }
+  },
+
+  /** Restore a soft-deleted supplier */
+  async restore(id: string) {
+    const { error } = await supabase
+      .from('suppliers')
+      .update({ deleted_at: null })
+      .eq('id', id);
+
+    if (error) throw error;
   },
 
   async getTransactions(supplierId: string) {

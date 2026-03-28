@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supplierService, Supplier } from '@/lib/services/supplierService';
 import { toast } from 'sonner';
 import { createSupplierAction, updateSupplierAction, deleteSupplierAction } from '@/app/actions/supplierActions';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 export function useSuppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -23,6 +24,13 @@ export function useSuppliers() {
   useEffect(() => {
     fetchSuppliers();
   }, []);
+
+  // Realtime: auto-refresh when suppliers table changes
+  useRealtimeSubscription({
+    table: 'suppliers',
+    event: '*',
+    onData: () => fetchSuppliers(),
+  });
 
   const addSupplier = async (newSupplier: Partial<Supplier>) => {
     setSubmitting(true);

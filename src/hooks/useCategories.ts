@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { categoryService, Category } from '@/lib/services/categoryService';
 import { toast } from 'sonner';
 import { createCategoryAction, updateCategoryAction, deleteCategoryAction } from '@/app/actions/categoryActions';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -23,6 +24,13 @@ export function useCategories() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Realtime: auto-refresh when categories table changes
+  useRealtimeSubscription({
+    table: 'categories',
+    event: '*',
+    onData: () => fetchCategories(),
+  });
 
   const addCategory = async (newCategory: Partial<Category>) => {
     setSubmitting(true);

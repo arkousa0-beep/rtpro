@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { customerService, Customer } from '@/lib/services/customerService';
 import { toast } from 'sonner';
 import { createCustomerAction, updateCustomerAction, deleteCustomerAction } from '@/app/actions/customerActions';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 export function useCustomers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -23,6 +24,13 @@ export function useCustomers() {
   useEffect(() => {
     fetchCustomers();
   }, []);
+
+  // Realtime: auto-refresh when customers table changes
+  useRealtimeSubscription({
+    table: 'customers',
+    event: '*',
+    onData: () => fetchCustomers(),
+  });
 
   const addCustomer = async (newCustomer: Partial<Customer>) => {
     setSubmitting(true);

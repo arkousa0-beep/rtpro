@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { TransactionDetailsDrawer } from "@/components/management/TransactionDetailsDrawer";
 import { PaymentModal } from "@/components/debts/PaymentModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { customerService } from "@/lib/services/customerService";
 
 export default function CustomerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -96,7 +97,6 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
       const { data, error } = await supabase.rpc('pay_customer_debt', {
         p_customer_id: id,
         p_amount: amount,
-        p_payment_method: paymentMethod
       });
 
       if (error) throw error;
@@ -117,13 +117,7 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
     setOpenDeleteDialog(false);
     setDeleting(true);
     try {
-      const { error } = await supabase
-        .from('customers')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await customerService.delete(id);
       toast.success("تم حذف العميل بنجاح");
       router.push("/customers");
     } catch (err: any) {

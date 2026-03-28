@@ -7,7 +7,7 @@ import { Product, Item, Category } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowRight, Tag, Box, TrendingUp, AlertCircle, Plus, Printer } from "lucide-react";
+import { Loader2, ArrowRight, Tag, Box, TrendingUp, AlertCircle, Plus, Printer, ChevronRight, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -31,12 +31,20 @@ export default function ProductDetailsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [dateType, setDateType] = useState<'Add' | 'Sale' | 'Return'>('Add');
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 50;
 
   const [counts, setCounts] = useState({ all: 0, available: 0, sold: 0, returned: 0 });
 
   useEffect(() => {
     fetchData();
-  }, [id, activeTab, search, startDate, endDate, dateType]);
+  }, [id, activeTab, search, startDate, endDate, dateType, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, search, startDate, endDate, dateType]);
 
   async function fetchData() {
     setLoading(true);
@@ -48,14 +56,19 @@ export default function ProductDetailsPage() {
         .single();
       setProduct(prodData);
 
-      const itemsData = await inventoryService.getProductItems(id, {
+      const { data: itemsData, count } = await inventoryService.getProductItems(id, {
         status: activeTab,
         search,
         startDate,
         endDate,
-        dateType
+        dateType,
+        page,
+        pageSize
       });
       setItems(itemsData || []);
+      if (count !== null) {
+        setTotalPages(Math.ceil(count / pageSize) || 1);
+      }
 
       // Fetch counts for tabs (unfiltered)
       const { data: allItems } = await supabase
@@ -270,6 +283,30 @@ export default function ProductDetailsPage() {
             )}
           </AnimatePresence>
         </div>
+        
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-4 mt-8 pb-8">
+            <Button 
+              variant="outline" 
+              className="glass border-white/10"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1 || loading}
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+            <span className="text-white/50 text-sm font-bold">
+              صفحة {page} من {totalPages}
+            </span>
+            <Button 
+              variant="outline" 
+              className="glass border-white/10"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages || loading}
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -35,6 +35,7 @@ export interface Customer {
   phone: string | null
   address: string | null
   balance: number
+  deleted_at: string | null
   created_at: string
 }
 
@@ -43,6 +44,7 @@ export interface Supplier {
   name: string
   phone: string | null
   balance: number
+  deleted_at: string | null
   created_at: string
 }
 
@@ -50,6 +52,7 @@ export interface Category {
   id: string
   name: string
   icon: string | null
+  deleted_at: string | null
   created_at: string
 }
 
@@ -61,6 +64,7 @@ export interface Product {
   category?: string | null
   image_url?: string | null
   description?: string | null
+  deleted_at: string | null
   created_at: string
   categories?: Category
 }

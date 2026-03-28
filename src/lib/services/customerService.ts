@@ -11,13 +11,46 @@ export const customerService = {
     const { data, error } = await supabase
       .from('customers')
       .select('*')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data;
   },
-
   async create(customer: Partial<Omit<Customer, 'id' | 'created_at'>>) {
+    // Check if a soft-deleted customer with the same name (and phone) exists
+    let query = supabase
+      .from('customers')
+      .select('id, deleted_at')
+      .eq('name', customer.name)
+      .not('deleted_at', 'is', null);
+      
+    if (customer.phone) {
+      query = query.eq('phone', customer.phone);
+    } else {
+      query = query.is('phone', null);
+    }
+
+    const { data: existingDeleted } = await query.limit(1);
+
+    if (existingDeleted && existingDeleted.length > 0) {
+      // Auto-restore and update with new details
+      const idToRestore = existingDeleted[0].id;
+      const { data, error } = await supabase
+        .from('customers')
+        .update({ ...customer, deleted_at: null })
+        .eq('id', idToRestore)
+        .select();
+
+      if (error) throw error;
+      if (data && data[0]) {
+        try {
+          await logActivity('UPDATE_CUSTOMER', 'customers', idToRestore, { notes: 'Restored automatically on recreation', name: customer.name });
+        } catch { /* لا نوقف العملية */ }
+      }
+      return data;
+    }
+
     const { data, error } = await supabase
       .from('customers')
       .insert([customer])
@@ -53,19 +86,7 @@ export const customerService = {
   },
 
   async delete(id: string) {
-    // Check for linked sold items
-    const { data: items } = await supabase
-      .from('items')
-      .select('barcode')
-      .eq('customer_id', id)
-      .eq('status', 'Sold')
-      .limit(1);
-
-    if (items && items.length > 0) {
-      throw new Error('لا يمكن حذف العميل — لديه قطع مباعة مرتبطة به');
-    }
-
-    // Check for outstanding balance
+    // 1. Check for outstanding balance
     const { data: customer } = await supabase
       .from('customers')
       .select('balance')
@@ -76,9 +97,10 @@ export const customerService = {
       throw new Error('لا يمكن حذف العميل — لديه رصيد مستحق غير محصَّل');
     }
 
+    // 2. Soft delete: mark as deleted (keeps all history intact)
     const { error } = await supabase
       .from('customers')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
 
     if (error) throw error;
@@ -86,5 +108,15 @@ export const customerService = {
     try {
       await logActivity('DELETE_CUSTOMER', 'customers', id);
     } catch { /* لا نوقف العملية إذا فشل التسجيل */ }
+  },
+
+  /** Restore a soft-deleted customer */
+  async restore(id: string) {
+    const { error } = await supabase
+      .from('customers')
+      .update({ deleted_at: null })
+      .eq('id', id);
+
+    if (error) throw error;
   },
 };
