@@ -35,6 +35,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ReturnDialog } from "@/components/ReturnDialog";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 // Management Components
 import { CustomerList } from "@/components/management/CustomerList";
@@ -57,9 +58,10 @@ export default function MorePage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
-  const [newItem, setNewItem] = useState({ name: "", phone: "", categoryId: "" });
+  const [newItem, setNewItem] = useState({ name: "", phone: "", address: "", categoryId: "" });
   const [submitting, setSubmitting] = useState(false);
   const [open, setOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -95,7 +97,7 @@ export default function MorePage() {
     
     try {
       if (activeTab === "customers") {
-        await customerService.create({ name: newItem.name, phone: newItem.phone });
+        await customerService.create({ name: newItem.name, phone: newItem.phone, address: newItem.address });
       } else if (activeTab === "suppliers") {
         await supplierService.create({ name: newItem.name, phone: newItem.phone });
       } else if (activeTab === "products") {
@@ -105,7 +107,7 @@ export default function MorePage() {
       }
 
       toast.success("تم الإضافة بنجاح");
-      setNewItem({ name: "", phone: "", categoryId: "" });
+      setNewItem({ name: "", phone: "", address: "", categoryId: "" });
       setOpen(false);
       fetchData();
     } catch (err: unknown) {
@@ -135,8 +137,12 @@ export default function MorePage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("هل أنت متأكد من الحذف؟")) return;
+  const requestDelete = (id: string) => setPendingDeleteId(id);
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     
     try {
       if (activeTab === "customers") await customerService.delete(id);
@@ -282,6 +288,18 @@ export default function MorePage() {
                           onChange={e => setNewItem({...newItem, phone: e.target.value})}
                         />
                       </div>
+                      
+                      {activeTab === "customers" && (
+                        <div className="space-y-3">
+                          <label className="text-xs font-black text-primary uppercase tracking-widest mr-1">العنوان</label>
+                          <Input 
+                            className="h-14 rounded-2xl bg-white/[0.05] border-white/5 text-white focus-visible:ring-primary text-right glass"
+                            value={newItem.address}
+                            onChange={e => setNewItem({...newItem, address: e.target.value})}
+                            placeholder="مثال: القاهرة، مدينة نصر"
+                          />
+                        </div>
+                      )}
                     </>
                   ) : activeTab === "products" ? (
                     <div className="space-y-3">
@@ -343,14 +361,14 @@ export default function MorePage() {
                     {activeTab === "suppliers" && (
                       <SupplierList 
                         suppliers={filtered as Supplier[]} 
-                        onDelete={handleDelete}
+                        onDelete={requestDelete}
                         onEdit={handleEdit}
                       />
                     )}
                     {activeTab === "products" && (
                       <ProductList 
                         products={filtered as Product[]} 
-                        onDelete={handleDelete}
+                        onDelete={requestDelete}
                         onEdit={handleEdit}
                         onViewDetails={handleViewDetails}
                       />
@@ -358,7 +376,7 @@ export default function MorePage() {
                     {activeTab === "categories" && (
                       <CategoryList 
                         categories={filtered as Category[]} 
-                        onDelete={handleDelete}
+                        onDelete={requestDelete}
                         onEdit={handleEdit}
                         onViewDetails={handleViewDetails}
                       />
@@ -395,6 +413,17 @@ export default function MorePage() {
           </motion.div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+        title="تأكيد الحذف"
+        description={`هل أنت متأكد من حذف هذا ${activeTab === 'customers' ? 'العميل' : activeTab === 'suppliers' ? 'المورد' : activeTab === 'products' ? 'المنتج' : 'الصنف'}؟`}
+        confirmLabel="نعم، احذف"
+        cancelLabel="إلغاء"
+        onConfirm={confirmDelete}
+        destructive
+      />
     </div>
   );
 }

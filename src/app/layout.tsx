@@ -1,16 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { ServiceWorkerRegister } from "@/components/layout/ServiceWorkerRegister";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
 
-const cairo = Cairo({ 
-  subsets: ["arabic"], 
-  weight: ["400", "500", "600", "700"],
+const cairo = localFont({
+  src: "./fonts/Cairo-Variable.ttf",
   display: "swap",
-  adjustFontFallback: false
+  variable: "--font-cairo",
 });
 
 export const metadata: Metadata = {

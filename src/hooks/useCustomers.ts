@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { customerService, Customer } from '@/lib/services/customerService';
 import { toast } from 'sonner';
+import { createCustomerAction, updateCustomerAction, deleteCustomerAction } from '@/app/actions/customerActions';
 
 export function useCustomers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -26,7 +27,7 @@ export function useCustomers() {
   const addCustomer = async (newCustomer: Partial<Customer>) => {
     setSubmitting(true);
     try {
-      await customerService.create(newCustomer);
+      await createCustomerAction(newCustomer);
       toast.success('تم إضافة العميل بنجاح');
       await fetchCustomers();
       return true;
@@ -38,10 +39,16 @@ export function useCustomers() {
     }
   };
 
-  const deleteCustomer = async (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا العميل؟')) return;
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const requestDeleteCustomer = (id: string) => setPendingDeleteId(id);
+
+  const confirmDeleteCustomer = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     try {
-      await customerService.delete(id);
+      await deleteCustomerAction(id);
       toast.success('تم حذف العميل بنجاح');
       await fetchCustomers();
     } catch (err: any) {
@@ -52,7 +59,7 @@ export function useCustomers() {
   const updateCustomer = async (id: string, updates: Partial<Customer>) => {
     setSubmitting(true);
     try {
-      await customerService.update(id, updates);
+      await updateCustomerAction(id, updates);
       toast.success('تم تحديث بيانات العميل بنجاح');
       await fetchCustomers();
       return true;
@@ -69,7 +76,10 @@ export function useCustomers() {
     loading, 
     submitting, 
     addCustomer, 
-    deleteCustomer, 
+    requestDeleteCustomer,
+    confirmDeleteCustomer,
+    pendingDeleteId,
+    setPendingDeleteId,
     updateCustomer,
     refresh: fetchCustomers 
   };

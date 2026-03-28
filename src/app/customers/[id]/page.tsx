@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { TransactionDetailsDrawer } from "@/components/management/TransactionDetailsDrawer";
 import { PaymentModal } from "@/components/debts/PaymentModal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export default function CustomerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -31,6 +32,7 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
   const [loading, setLoading] = useState(true);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
   const [isTransactionOpen, setIsTransactionOpen] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // Payment Form State
@@ -41,7 +43,7 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
   
   // Edit Profile State
   const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", phone: "" });
+  const [editForm, setEditForm] = useState({ name: "", phone: "", address: "" });
   const [submittingEdit, setSubmittingEdit] = useState(false);
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
       setEditForm({
         name: customer.name || "",
         phone: customer.phone || "",
+        address: customer.address || "",
       });
     }
   }, [customer]);
@@ -111,8 +114,7 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
   };
 
   const handleDelete = async () => {
-    if (!confirm("هل أنت متأكد من حذف هذا العميل؟")) return;
-    
+    setOpenDeleteDialog(false);
     setDeleting(true);
     try {
       const { error } = await supabase
@@ -196,6 +198,9 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
                   {customer.phone && (
                     <span className="flex items-center gap-2"><Phone className="w-4 h-4" /> {customer.phone}</span>
                   )}
+                  {customer.address && (
+                    <span className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {customer.address}</span>
+                  )}
                 </div>
               </div>
 
@@ -204,7 +209,7 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    onClick={handleDelete}
+                    onClick={() => setOpenDeleteDialog(true)}
                     disabled={deleting}
                     className="h-10 w-10 glass rounded-xl text-red-500/40 hover:text-white hover:bg-red-500 transition-all"
                   >
@@ -237,6 +242,14 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
                           className="h-14 rounded-2xl bg-white/[0.05] border-white/5 text-white glass text-right"
                           value={editForm.phone}
                           onChange={e => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-white/40 uppercase tracking-widest mr-1">العنوان</label>
+                        <Input 
+                          className="h-14 rounded-2xl bg-white/[0.05] border-white/5 text-white glass text-right"
+                          value={editForm.address}
+                          onChange={e => setEditForm(prev => ({ ...prev, address: e.target.value }))}
                         />
                       </div>
 
@@ -326,6 +339,17 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
         entityName={customer.name}
         currentBalance={customer.balance}
         onSuccess={fetchData}
+      />
+
+      <ConfirmDialog
+        open={openDeleteDialog}
+        onOpenChange={setOpenDeleteDialog}
+        title="تأكيد الحذف"
+        description="هل أنت متأكد من حذف هذا العميل؟ لا يمكن التراجع عن هذا الإجراء وسيتم حذف أو فقدان ارتباطات الفواتير والمدفوعات المتعلقة به."
+        confirmLabel="نعم، احذف العميل"
+        cancelLabel="إلغاء"
+        onConfirm={handleDelete}
+        destructive
       />
 
       <TransactionDetailsDrawer 

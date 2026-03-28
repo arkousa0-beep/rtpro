@@ -33,6 +33,7 @@ export interface Customer {
   id: string
   name: string
   phone: string | null
+  address: string | null
   balance: number
   created_at: string
 }

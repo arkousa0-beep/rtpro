@@ -121,10 +121,8 @@ export function CategoryDetailsDrawer({
               <Button 
                 variant="ghost"
                 onClick={() => {
-                  if (confirm("هل أنت متأكد من حذف هذا التصنيف؟")) {
-                    onDelete(category.id!);
-                    onOpenChange(false);
-                  }
+                  onDelete(category.id);
+                  onOpenChange(false);
                 }}
                 className="h-14 w-14 rounded-2xl border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center p-0 group"
               >

@@ -12,9 +12,10 @@ import { SupplierList } from "@/components/management/SupplierList";
 import { ManagePageLayout } from "@/components/management/ManagePageLayout";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export default function SuppliersPage() {
-  const { suppliers, loading, submitting, addSupplier, updateSupplier, deleteSupplier } = useSuppliers();
+  const { suppliers, loading, submitting, addSupplier, updateSupplier, requestDeleteSupplier, confirmDeleteSupplier, pendingDeleteId, setPendingDeleteId } = useSuppliers();
   const [search, setSearch] = useState("");
   const [formData, setFormData] = useState({ name: "", phone: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -183,10 +184,21 @@ export default function SuppliersPage() {
       <AnimatePresence mode="wait">
         <SupplierList 
           suppliers={filtered} 
-          onDelete={deleteSupplier} 
+          onDelete={requestDeleteSupplier} 
           onEdit={handleEdit}
         />
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+        title="تأكيد الحذف"
+        description="هل أنت متأكد من حذف هذا المورد؟ لا يمكن التراجع عن هذا الإجراء وسيتم حذف أو فقدان ارتباطات الفواتير والمدفوعات المتعلقة به."
+        confirmLabel="نعم، احذف المورد"
+        cancelLabel="إلغاء"
+        onConfirm={confirmDeleteSupplier}
+        destructive
+      />
     </ManagePageLayout>
   );
 }

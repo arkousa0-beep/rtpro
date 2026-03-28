@@ -9,9 +9,17 @@ import { CategoryModal } from "@/components/management/CategoryModal";
 import { CategoryDetailsDrawer } from "@/components/management/CategoryDetailsDrawer";
 import { useCategories } from "@/hooks/useCategories";
 import { Category } from "@/lib/services/categoryService";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export default function CategoriesPage() {
-  const { categories, loading, deleteCategory } = useCategories();
+  const { 
+    categories, 
+    loading, 
+    requestDeleteCategory, 
+    confirmDeleteCategory, 
+    pendingDeleteId, 
+    setPendingDeleteId 
+  } = useCategories();
   
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -62,7 +70,7 @@ export default function CategoriesPage() {
         <AnimatePresence mode="wait">
           <CategoryList 
             categories={filtered} 
-            onDelete={deleteCategory} 
+            onDelete={requestDeleteCategory} 
             onEdit={(c) => {
               setEditingCategory(c);
               setOpen(true);
@@ -89,7 +97,18 @@ export default function CategoriesPage() {
           setEditingCategory(c);
           setOpen(true);
         }}
-        onDelete={deleteCategory}
+        onDelete={requestDeleteCategory}
+      />
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+        title="تأكيد الحذف"
+        description="هل أنت متأكد من حذف هذا التصنيف؟"
+        confirmLabel="نعم، احذف التصنيف"
+        cancelLabel="إلغاء"
+        onConfirm={confirmDeleteCategory}
+        destructive
       />
     </>
   );

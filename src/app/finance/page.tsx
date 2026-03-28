@@ -9,12 +9,13 @@ import {
   DollarSign, 
   Package, 
   Users, 
-  Store,
-  ArrowUpRight,
   ArrowDownRight,
   Loader2,
   Calendar,
-  Wallet
+  Wallet,
+  Clock,
+  Store,
+  ArrowUpRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,13 @@ import {
   Area
 } from "recharts";
 import { Transaction } from "@/lib/database.types";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
 interface Stats {
   revenue: number;
@@ -55,17 +63,19 @@ export default function FinancePage() {
     try {
       // ─── Time range window ───────────────────────────────────────────
       const now = new Date();
-      let since: Date;
+      let since: Date | null = null;
       if (timeRange === 'today') {
         since = new Date(now); since.setHours(0, 0, 0, 0);
       } else if (timeRange === 'week') {
         since = new Date(now); since.setDate(now.getDate() - 7);
-      } else {
+      } else if (timeRange === 'month') {
         since = new Date(now); since.setMonth(now.getMonth() - 1);
+      } else {
+        since = null;
       }
 
       // ─── Finance stats from RPC ───────────────────────────────────────
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_finance_stats');
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_finance_stats', since ? { p_since: since.toISOString() } : {});
 
       let revenue = 0, profit = 0, inventoryValue = 0, customerDebt = 0, supplierDebt = 0;
 
@@ -81,12 +91,17 @@ export default function FinancePage() {
       }
 
       // ─── Recent sales for chart (within selected range) ──────────────
-      const { data: recentTransactions } = await supabase
+      let query = supabase
         .from('transactions')
         .select('*')
         .eq('type', 'Sale')
-        .gte('created_at', since.toISOString())
         .order('created_at', { ascending: false });
+        
+      if (since) {
+        query = query.gte('created_at', since.toISOString());
+      }
+      
+      const { data: recentTransactions } = await query;
 
       // Group sales by day
       const salesByDay = (recentTransactions || []).reduce(
@@ -143,6 +158,19 @@ export default function FinancePage() {
           </h2>
           <p className="text-white/40 text-sm font-medium">متابعة الأداء المالي والأرباح</p>
         </div>
+        
+        <Select value={timeRange} onValueChange={setTimeRange}>
+          <SelectTrigger className="w-[140px] h-12 bg-white/5 border-white/10 text-white rounded-2xl glass font-bold">
+            <Clock className="w-4 h-4 ml-2 text-primary" />
+            <SelectValue placeholder="الفترة" />
+          </SelectTrigger>
+          <SelectContent className="glass border-white/10 rounded-2xl text-right" dir="rtl">
+            <SelectItem value="today">اليوم</SelectItem>
+            <SelectItem value="week">آخر 7 أيام</SelectItem>
+            <SelectItem value="month">آخر 30 يوم</SelectItem>
+            <SelectItem value="all">كل الأوقات</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Main Grid */}

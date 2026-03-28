@@ -89,7 +89,7 @@ export function CategoryList({ categories, onDelete, onEdit, onViewDetails }: Ca
                   <DropdownMenuSeparator className="bg-white/5 my-1" />
                   <DropdownMenuItem 
                     onClick={() => {
-                      if (confirm("هل أنت متأكد من الحذف؟")) onDelete(category.id!);
+                      onDelete(category.id!);
                     }}
                     className="gap-3 text-red-400 focus:bg-red-500/10 focus:text-red-400 cursor-pointer rounded-lg px-3 h-11"
                   >

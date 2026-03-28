@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supplierService, Supplier } from '@/lib/services/supplierService';
 import { toast } from 'sonner';
+import { createSupplierAction, updateSupplierAction, deleteSupplierAction } from '@/app/actions/supplierActions';
 
 export function useSuppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -26,7 +27,7 @@ export function useSuppliers() {
   const addSupplier = async (newSupplier: Partial<Supplier>) => {
     setSubmitting(true);
     try {
-      await supplierService.create(newSupplier);
+      await createSupplierAction(newSupplier);
       toast.success('تم إضافة المورد بنجاح');
       await fetchSuppliers();
       return true;
@@ -38,10 +39,16 @@ export function useSuppliers() {
     }
   };
 
-  const deleteSupplier = async (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا المورد؟')) return;
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const requestDeleteSupplier = (id: string) => setPendingDeleteId(id);
+
+  const confirmDeleteSupplier = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     try {
-      await supplierService.delete(id);
+      await deleteSupplierAction(id);
       toast.success('تم حذف المورد بنجاح');
       await fetchSuppliers();
     } catch (err: any) {
@@ -57,7 +64,7 @@ export function useSuppliers() {
     updateSupplier: async (id: string, updates: Partial<Supplier>) => {
       setSubmitting(true);
       try {
-        await supplierService.update(id, updates);
+        await updateSupplierAction(id, updates);
         toast.success("تم تحديث بيانات المورد");
         await fetchSuppliers();
         return true;
@@ -68,6 +75,10 @@ export function useSuppliers() {
         setSubmitting(false);
       }
     },
-    deleteSupplier,    refresh: fetchSuppliers 
+    requestDeleteSupplier,
+    confirmDeleteSupplier,
+    pendingDeleteId,
+    setPendingDeleteId,
+    refresh: fetchSuppliers 
   };
 }

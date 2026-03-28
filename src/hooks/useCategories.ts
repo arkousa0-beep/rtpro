@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { categoryService, Category } from '@/lib/services/categoryService';
 import { toast } from 'sonner';
+import { createCategoryAction, updateCategoryAction, deleteCategoryAction } from '@/app/actions/categoryActions';
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -26,7 +27,7 @@ export function useCategories() {
   const addCategory = async (newCategory: Partial<Category>) => {
     setSubmitting(true);
     try {
-      await categoryService.create(newCategory);
+      await createCategoryAction(newCategory);
       toast.success('تم إضافة التصنيف بنجاح');
       await fetchCategories();
       return true;
@@ -41,7 +42,7 @@ export function useCategories() {
   const updateCategory = async (id: string, data: Partial<Category>) => {
     setSubmitting(true);
     try {
-      await categoryService.update(id, data);
+      await updateCategoryAction(id, data);
       toast.success('تم تحديث التصنيف بنجاح');
       await fetchCategories();
       return true;
@@ -53,10 +54,16 @@ export function useCategories() {
     }
   };
 
-  const deleteCategory = async (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا التصنيف؟')) return;
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const requestDeleteCategory = (id: string) => setPendingDeleteId(id);
+
+  const confirmDeleteCategory = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     try {
-      await categoryService.delete(id);
+      await deleteCategoryAction(id);
       toast.success('تم حذف التصنيف بنجاح');
       await fetchCategories();
     } catch (err: any) {
@@ -79,7 +86,10 @@ export function useCategories() {
     submitting, 
     addCategory, 
     updateCategory,
-    deleteCategory, 
+    requestDeleteCategory,
+    confirmDeleteCategory,
+    pendingDeleteId,
+    setPendingDeleteId,
     getCategoryProducts,
     refresh: fetchCategories 
   };

@@ -16,9 +16,9 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { cn } from "@/lib/utils";
 
 export default function CustomersPage() {
-  const { customers, loading, submitting, addCustomer, deleteCustomer } = useCustomers();
+  const { customers, loading, submitting, addCustomer } = useCustomers();
   const [search, setSearch] = useState("");
-  const [newCustomer, setNewCustomer] = useState({ name: "", phone: "" });
+  const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", address: "" });
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'balance' | 'newest'>('newest');
   const [filterBy, setFilterBy] = useState<'all' | 'debt'>('all');
@@ -27,7 +27,7 @@ export default function CustomersPage() {
     e.preventDefault();
     const success = await addCustomer(newCustomer);
     if (success) {
-      setNewCustomer({ name: "", phone: "" });
+      setNewCustomer({ name: "", phone: "", address: "" });
       setIsAddDialogOpen(false);
     }
   };
@@ -78,6 +78,15 @@ export default function CustomersPage() {
               value={newCustomer.phone}
               onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})}
               placeholder="012XXXXXXXX"
+            />
+          </div>
+          <div className="space-y-3">
+            <label className="text-xs font-black text-blue-500 uppercase tracking-widest mr-1">العنوان</label>
+            <Input 
+              className="h-14 rounded-2xl bg-white/[0.05] border-white/5 text-white focus-visible:ring-blue-500 text-right glass"
+              value={newCustomer.address}
+              onChange={e => setNewCustomer({...newCustomer, address: e.target.value})}
+              placeholder="مثال: القاهرة، مدينة نصر"
             />
           </div>
 
