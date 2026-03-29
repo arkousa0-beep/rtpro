@@ -24,7 +24,7 @@ import { ar } from 'date-fns/locale';
 import Link from 'next/link';
 import { useUIStore } from '@/lib/store/uiStore';
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -275,3 +275,19 @@ export default function SearchPage() {
     </div>
   );
 }
+
+export default function SearchPage() {
+  return (
+    <React.Suspense fallback={
+      <div className="container mx-auto p-4 max-w-4xl min-h-screen flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="w-12 h-12 bg-white/5 rounded-full mb-4"></div>
+          <div className="h-4 w-32 bg-white/5 rounded"></div>
+        </div>
+      </div>
+    }>
+      <SearchContent />
+    </React.Suspense>
+  );
+}
+

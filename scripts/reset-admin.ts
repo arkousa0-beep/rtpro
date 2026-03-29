@@ -1,4 +1,4 @@
-import { createAdminClient } from "./src/lib/supabase/admin";
+import { createAdminClient } from "../src/lib/supabase/admin";
 import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
@@ -67,7 +67,7 @@ async function resetUsers() {
         suppliers: true,
         transactions: true,
       },
-    });
+    } as any);
 
   if (profileError) {
     console.error("Error creating profile:", profileError.message);

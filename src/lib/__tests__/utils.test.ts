@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert";
-import { sanitizeLikePattern } from "../sql-utils.ts";
+import { sanitizeLikePattern } from "../sql-utils";
 
 test("sanitizeLikePattern escapes %", () => {
   assert.strictEqual(sanitizeLikePattern("100%"), "100\\%");

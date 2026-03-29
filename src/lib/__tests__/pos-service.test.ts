@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { validateBarcodes } from '../barcode-utils.ts';
+import { POSService } from '../pos-service';
+import { validateBarcodes } from '../barcode-utils';
 
 /**
  * Mocking POSService logic to test its integration with validateBarcodes

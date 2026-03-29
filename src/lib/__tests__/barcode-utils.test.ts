@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { isValidBarcode, validateBarcodes } from '../barcode-utils.ts';
+import { isValidBarcode, validateBarcodes } from '../barcode-utils';
 
 test('Barcode Utils - isValidBarcode', async (t) => {
   await t.test('should return true for alphanumeric barcodes', () => {
