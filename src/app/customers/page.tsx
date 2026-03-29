@@ -17,15 +17,31 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { cn } from "@/lib/utils";
 import { exportToExcel } from "@/lib/services/exportService";
 import { useRouteGuard } from "@/hooks/useRouteGuard";
+import { useUIStore } from "@/lib/store/uiStore";
 
 export default function CustomersPage() {
   const { isAuthorized, isLoading: isAuthLoading } = useRouteGuard('customers');
-  const { customers, loading, submitting, addCustomer } = useCustomers();
-  const [search, setSearch] = useState("");
+  const { customers, loading, refresh, submitting, addCustomer } = useCustomers();
+  
+  const { pageStates, setPageState } = useUIStore();
+  const customersState = pageStates['customers'] || { search: '', filters: { sortBy: 'newest', filterBy: 'all' } };
+  
+  const search = customersState.search;
+  const sortBy = (customersState.filters?.sortBy as 'name' | 'balance' | 'newest') || 'newest';
+  const filterBy = (customersState.filters?.filterBy as 'all' | 'debt') || 'all';
+
+  const setSearch = (val: string) => setPageState('customers', { ...customersState, search: val });
+  const setSortBy = (val: string) => setPageState('customers', { 
+    ...customersState, 
+    filters: { ...customersState.filters, sortBy: val } 
+  });
+  const setFilterBy = (val: string) => setPageState('customers', { 
+    ...customersState, 
+    filters: { ...customersState.filters, filterBy: val } 
+  });
+
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", address: "" });
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<'name' | 'balance' | 'newest'>('newest');
-  const [filterBy, setFilterBy] = useState<'all' | 'debt'>('all');
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,6 +128,7 @@ export default function CustomersPage() {
       isDialogOpen={isAddDialogOpen}
       onDialogOpenChange={setIsAddDialogOpen}
       isLoading={loading}
+      onRefresh={refresh}
       iconColor="text-blue-400"
       buttonColor="bg-blue-600 hover:bg-blue-700"
       extraContent={

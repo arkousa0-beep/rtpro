@@ -6,6 +6,7 @@ import {
   CustomerDebt,
   DeferredSale,
 } from '@/lib/services/debtService';
+import { useUIStore } from '@/lib/store/uiStore';
 
 export function useDebts() {
   const [summary, setSummary]           = useState<DebtSummary | null>(null);
@@ -16,6 +17,7 @@ export function useDebts() {
   const [hasMore, setHasMore]           = useState(false);
   const [totalCount, setTotalCount]     = useState(0);
   const [page, setPage]                 = useState(1);
+  const { lastRefresh }                 = useUIStore();
 
   const fetchAll = useCallback(async (currentPage = 1) => {
     if (currentPage === 1) setLoading(true);
@@ -50,7 +52,7 @@ export function useDebts() {
 
   useEffect(() => {
     fetchAll(1);
-  }, [fetchAll]);
+  }, [fetchAll, lastRefresh]);
 
   const loadMore = useCallback(() => {
     if (!loadingMore && hasMore) fetchAll(page + 1);

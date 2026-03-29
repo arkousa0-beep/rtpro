@@ -63,7 +63,7 @@ export function BottomNav() {
   }, []);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 h-20 glass border-t border-white/5 flex items-center justify-around px-2 pb-6 pt-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 h-20 glass border-t border-white/5 flex md:hidden items-center justify-around px-2 pb-6 pt-2">
       {links.map((link) => {
         const Icon = link.icon;
         const isActive = pathname === link.href;

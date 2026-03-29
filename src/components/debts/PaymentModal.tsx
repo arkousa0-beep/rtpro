@@ -15,6 +15,7 @@ import { Loader2, Banknote, CreditCard, ArrowLeftRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { debtService } from '@/lib/services/debtService';
 import { cn } from '@/lib/utils';
+import { useDataStore } from '@/lib/store/dataStore';
 
 type PaymentMethod = 'Cash' | 'Card' | 'Transfer';
 
@@ -44,6 +45,7 @@ export const PaymentModal = ({
   const [amount, setAmount]               = useState<string>('');
   const [method, setMethod]               = useState<PaymentMethod>('Cash');
   const [loading, setLoading]             = useState(false);
+  const { updateCustomer }                = useDataStore();
 
   const handleClose = () => {
     setAmount('');
@@ -68,6 +70,12 @@ export const PaymentModal = ({
     setLoading(true);
     try {
       await debtService.processPayment(entityId, numAmount, method);
+      
+      // Update global store for instant UI reactivity
+      updateCustomer(entityId, { 
+        balance: Number(currentBalance) - numAmount 
+      });
+
       toast.success(`تم تحصيل ${numAmount.toLocaleString()} ج.م بنجاح`);
       onSuccess();
       handleClose();

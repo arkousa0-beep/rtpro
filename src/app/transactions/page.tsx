@@ -13,43 +13,32 @@ import { TransactionDetailsDrawer } from "@/components/management/TransactionDet
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { exportToPDF, exportToExcel } from "@/lib/services/exportService";
 import { useRouteGuard } from "@/hooks/useRouteGuard";
+import { useUIStore } from "@/lib/store/uiStore";
+import { useTransactions } from "@/hooks/useTransactions";
 
 export default function TransactionsPage() {
   const { isAuthorized, isLoading: isAuthLoading } = useRouteGuard('transactions');
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  
+  const { pageStates, setPageState } = useUIStore();
+  const transactionsState = pageStates['transactions'] || { search: '', page: 1 };
+  
+  const search = transactionsState.search;
+  const page = transactionsState.page || 1;
+  const setSearch = (val: string) => setPageState('transactions', { ...transactionsState, search: val });
+  const setPage = (val: number | ((p: number) => number)) => {
+    const next = typeof val === 'function' ? val(page) : val;
+    setPageState('transactions', { ...transactionsState, page: next });
+  };
+
+  const { transactions, loading, totalPages, refresh } = useTransactions(page);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const pageSize = 50;
-
-  useEffect(() => {
-    fetchTransactions();
-  }, [page]);
-
-  async function fetchTransactions() {
-    setLoading(true);
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-
-    const { data, count, error } = await supabase
-      .from('transactions')
-      .select('*, customers(name)', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, to);
-      
-    if (data) setTransactions(data as any[]);
-    if (count !== null) setTotalPages(Math.ceil(count / pageSize) || 1);
-    setLoading(false);
-  }
 
   // Realtime: auto-refresh on new transactions
   useRealtimeSubscription({
     table: 'transactions',
     event: '*',
-    onData: () => fetchTransactions(),
+    onData: () => refresh(),
   });
 
   const handleExportPDF = () => {
@@ -154,6 +143,7 @@ export default function TransactionsPage() {
       isDialogOpen={false}
       onDialogOpenChange={() => {}}
       isLoading={loading}
+      onRefresh={refresh}
       iconColor="text-indigo-500"
       buttonColor="bg-indigo-600"
       addDialogContent={

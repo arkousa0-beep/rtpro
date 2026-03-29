@@ -149,17 +149,17 @@ export default function ManagePage() {
   }
 
   return (
-    <div className="min-h-screen pb-40 pt-10 px-6 space-y-12 max-w-2xl mx-auto">
+    <div className="min-h-screen pb-40 pt-10 px-6 space-y-12 max-w-7xl mx-auto">
       {/* Header */}
       <div className="space-y-4 text-center md:text-right">
-        <h1 className="text-5xl font-black tracking-tighter text-white bg-clip-text text-transparent bg-gradient-to-l from-white to-white/50">
+        <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white bg-clip-text text-transparent bg-gradient-to-l from-white to-white/50">
           مركز الإدارة
         </h1>
-        <p className="text-white/30 text-xl font-medium">تحكم ذكي في مفاصل مشروعك</p>
+        <p className="text-white/30 text-lg md:text-2xl font-medium">تحكم ذكي في مفاصل مشروعك</p>
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <AnimatePresence>
           {manageItems.map((item, idx) => (
             <motion.div

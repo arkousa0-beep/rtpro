@@ -14,16 +14,32 @@ import { useSuppliers } from "@/hooks/useSuppliers";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useRouteGuard } from "@/hooks/useRouteGuard";
+import { useUIStore } from "@/lib/store/uiStore";
 
 export default function SuppliersPage() {
   const { isAuthorized, isLoading: isAuthLoading } = useRouteGuard('suppliers');
-  const { suppliers, loading, submitting, addSupplier, updateSupplier, requestDeleteSupplier, confirmDeleteSupplier, pendingDeleteId, setPendingDeleteId } = useSuppliers();
-  const [search, setSearch] = useState("");
+  const { suppliers, loading, refresh, submitting, addSupplier, updateSupplier, requestDeleteSupplier, confirmDeleteSupplier, pendingDeleteId, setPendingDeleteId } = useSuppliers();
+  
+  const { pageStates, setPageState } = useUIStore();
+  const suppliersState = pageStates['suppliers'] || { search: '', filters: { sortBy: 'newest', filterBy: 'all' } };
+  
+  const search = suppliersState.search;
+  const sortBy = (suppliersState.filters?.sortBy as 'name' | 'balance' | 'newest') || 'newest';
+  const filterBy = (suppliersState.filters?.filterBy as 'all' | 'debt') || 'all';
+
+  const setSearch = (val: string) => setPageState('suppliers', { ...suppliersState, search: val });
+  const setSortBy = (val: string) => setPageState('suppliers', { 
+    ...suppliersState, 
+    filters: { ...suppliersState.filters, sortBy: val } 
+  });
+  const setFilterBy = (val: string) => setPageState('suppliers', { 
+    ...suppliersState, 
+    filters: { ...suppliersState.filters, filterBy: val } 
+  });
+
   const [formData, setFormData] = useState({ name: "", phone: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<'name' | 'balance' | 'newest'>('newest');
-  const [filterBy, setFilterBy] = useState<'all' | 'debt'>('all');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +111,7 @@ export default function SuppliersPage() {
       isDialogOpen={open}
       onDialogOpenChange={setOpen}
       isLoading={loading}
+      onRefresh={refresh}
       iconColor="text-amber-500"
       buttonColor="bg-amber-600 hover:bg-amber-700"
       extraContent={

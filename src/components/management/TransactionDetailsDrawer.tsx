@@ -69,7 +69,7 @@ export function TransactionDetailsDrawer({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute left-4 top-4 w-10 h-10 rounded-full bg-white/5 border border-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all z-50"
+            className="absolute right-4 top-4 w-10 h-10 rounded-full bg-white/5 border border-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all z-50"
             onClick={() => onOpenChange(false)}
           >
             <X className="w-5 h-5" />

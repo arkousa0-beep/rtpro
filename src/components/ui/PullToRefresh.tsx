@@ -1,100 +1,120 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { motion, useAnimation } from "framer-motion";
-import { Loader2, ArrowDown } from "lucide-react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
+import { Loader2, ArrowDown } from 'lucide-react';
 
 interface PullToRefreshProps {
-  children: React.ReactNode;
-  /** Optional callback executed on refresh. If omitted, uses router.refresh(). */
   onRefresh?: () => Promise<void> | void;
+  children: React.ReactNode;
+  className?: string;
 }
 
-export function PullToRefresh({ children, onRefresh }: PullToRefreshProps) {
-  const [startY, setStartY] = useState(0);
-  const [currentY, setCurrentY] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
-  const controls = useAnimation();
-  const router = useRouter();
+export function PullToRefresh({ onRefresh, children, className }: PullToRefreshProps) {
+  const [isPulling, setIsPulling] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullProgress, setPullProgress] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  const PULL_THRESHOLD = 80;
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (window.scrollY === 0 && !refreshing) {
-      setStartY(e.touches[0].clientY);
-    }
-  }, [refreshing]);
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (startY > 0 && !refreshing) {
-      const y = e.touches[0].clientY;
-      if (y > startY) {
-        const pullDistance = Math.min((y - startY) * 0.4, 100);
-        setCurrentY(pullDistance);
-        if (pullDistance > 0) {
-          e.cancelable && e.preventDefault();
-        }
-        controls.set({ y: pullDistance });
+    let startY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Only record touch start if at the top
+      if (window.scrollY <= 0) {
+        startY = e.touches[0].pageY;
+      } else {
+        startY = 0;
       }
-    }
-  }, [startY, refreshing, controls]);
+    };
 
-  const handleTouchEnd = useCallback(async () => {
-    if (currentY > 70 && !refreshing) {
-      setRefreshing(true);
-      controls.start({ y: 50 });
+    const handleTouchMove = (e: TouchEvent) => {
+      if (startY === 0 || isRefreshing) return;
       
-      try {
-        if (onRefresh) {
-          await onRefresh();
-        } else {
-          // Use Next.js soft refresh — no full page reload
-          router.refresh();
-          // Wait a moment for data to re-fetch
-          await new Promise(resolve => setTimeout(resolve, 600));
-        }
-      } catch {
-        // Silently handle refresh errors
-      } finally {
-        await controls.start({ y: 0 });
-        setRefreshing(false);
-        setStartY(0);
-        setCurrentY(0);
+      const currentY = e.touches[0].pageY;
+      const diff = currentY - startY;
+
+      if (diff > 0 && window.scrollY <= 0) {
+        // Prevent default scrolling when pulling down at the top
+        if (e.cancelable) e.preventDefault();
+        
+        const progress = Math.min(diff / PULL_THRESHOLD, 1.5);
+        setPullProgress(progress);
+        setIsPulling(true);
+      } else {
+        setIsPulling(false);
+        setPullProgress(0);
       }
-    } else {
-      controls.start({ y: 0 });
-      setStartY(0);
-      setCurrentY(0);
-    }
-  }, [currentY, refreshing, controls, onRefresh, router]);
+    };
+
+    const handleTouchEnd = async () => {
+      if (isPulling && pullProgress >= 1 && !isRefreshing && onRefresh) {
+        setIsRefreshing(true);
+        try {
+          await onRefresh();
+        } finally {
+          setIsRefreshing(false);
+          setIsPulling(false);
+          setPullProgress(0);
+        }
+      } else {
+        setIsPulling(false);
+        setPullProgress(0);
+      }
+      startY = 0;
+    };
+
+    container.addEventListener('touchstart', handleTouchStart);
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isRefreshing, isPulling, pullProgress, onRefresh]);
 
   return (
-    <div 
-      className="relative w-full min-h-screen"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      <div className="absolute top-0 left-0 right-0 h-16 flex flex-col items-center justify-center -z-10 mt-4">
-        {refreshing ? (
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-primary" />
-            <span className="text-[10px] text-primary font-bold uppercase tracking-widest">تحديث البيانات...</span>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2 opacity-50" style={{ opacity: Math.min(currentY / 100, 1) }}>
-            <ArrowDown 
-              className="w-5 h-5 text-white/60 transition-transform duration-200" 
-              style={{ transform: `rotate(${currentY > 70 ? 180 : 0}deg)` }}
-            />
-            <span className="text-[10px] text-white/60 font-bold uppercase tracking-widest">
-              {currentY > 70 ? "أفلت للتحديث" : "اسحب للتحديث"}
-            </span>
-          </div>
+    <div ref={containerRef} className={className}>
+      <AnimatePresence>
+        {(isPulling || isRefreshing) && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ 
+              height: isRefreshing ? 60 : Math.min(pullProgress * PULL_THRESHOLD, 80),
+              opacity: 1 
+            }}
+            exit={{ height: 0, opacity: 0 }}
+            className="flex items-center justify-center overflow-hidden w-full sticky top-0 z-50 pointer-events-none"
+          >
+            <div className="bg-indigo-600/90 backdrop-blur-md rounded-full p-2 border border-white/10 shadow-xl">
+              {isRefreshing ? (
+                <Loader2 className="w-5 h-5 text-white animate-spin" />
+              ) : (
+                <motion.div
+                  style={{ rotate: (pullProgress - 1) * 180 }}
+                >
+                  <ArrowDown className="w-5 h-5 text-white" />
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
         )}
-      </div>
-      <motion.div animate={controls} className="w-full h-full bg-transparent">
+      </AnimatePresence>
+      <motion.div
+        animate={{ y: isPulling ? Math.min(pullProgress * PULL_THRESHOLD, 40) : 0 }}
+        transition={isPulling ? { type: 'spring', damping: 20, stiffness: 300 } : { type: 'spring', damping: 25, stiffness: 200 }}
+      >
         {children}
       </motion.div>
     </div>
   );
 }
+
+import { AnimatePresence } from 'framer-motion';

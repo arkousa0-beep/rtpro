@@ -1,29 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supplierService, Supplier } from '@/lib/services/supplierService';
 import { toast } from 'sonner';
 import { createSupplierAction, updateSupplierAction, deleteSupplierAction } from '@/app/actions/supplierActions';
 import { useRealtimeSubscription } from './useRealtimeSubscription';
+import { useUIStore } from '@/lib/store/uiStore';
+import { useDataStore } from '@/lib/store/dataStore';
 
 export function useSuppliers() {
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { suppliers, isHydrated, setSuppliers, addSupplier: storeAdd, updateSupplier: storeUpdate, removeSupplier: storeRemove } = useDataStore();
+  const [loading, setLoading] = useState(!isHydrated.suppliers);
   const [submitting, setSubmitting] = useState(false);
+  const { lastRefresh } = useUIStore();
 
-  const fetchSuppliers = async () => {
-    setLoading(true);
+  const fetchSuppliers = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await supplierService.getAll();
       setSuppliers(data || []);
     } catch (err: any) {
-      toast.error(err.message || 'حدث خطأ أثناء جلب الموردين');
+      console.error('Suppliers fetch error:', err);
+      if (!silent) toast.error(err.message || 'حدث خطأ أثناء جلب الموردين');
     } finally {
       setLoading(false);
     }
-  };
+  }, [setSuppliers]);
 
   useEffect(() => {
-    fetchSuppliers();
-  }, []);
+    fetchSuppliers(!isHydrated.suppliers);
+  }, [fetchSuppliers, lastRefresh, isHydrated.suppliers]);
 
   // Realtime: auto-refresh when suppliers table changes
   useRealtimeSubscription({
@@ -35,10 +39,12 @@ export function useSuppliers() {
   const addSupplier = async (newSupplier: Partial<Supplier>) => {
     setSubmitting(true);
     try {
-      await createSupplierAction(newSupplier);
-      toast.success('تم إضافة المورد بنجاح');
-      await fetchSuppliers();
-      return true;
+      const created = await createSupplierAction(newSupplier);
+      if (created) {
+        storeAdd(created as Supplier);
+        toast.success('تم إضافة المورد بنجاح');
+      }
+      return !!created;
     } catch (err: any) {
       toast.error(err.message || 'حدث خطأ أثناء الإضافة');
       return false;
@@ -57,8 +63,8 @@ export function useSuppliers() {
     setPendingDeleteId(null);
     try {
       await deleteSupplierAction(id);
+      storeRemove(id);
       toast.success('تم حذف المورد بنجاح');
-      await fetchSuppliers();
     } catch (err: any) {
       toast.error(err.message || 'حدث خطأ أثناء الحذف');
     }
@@ -67,15 +73,18 @@ export function useSuppliers() {
   return { 
     suppliers, 
     loading, 
+    refresh: fetchSuppliers,
     submitting, 
     addSupplier,
     updateSupplier: async (id: string, updates: Partial<Supplier>) => {
       setSubmitting(true);
       try {
-        await updateSupplierAction(id, updates);
-        toast.success("تم تحديث بيانات المورد");
-        await fetchSuppliers();
-        return true;
+        const updated = await updateSupplierAction(id, updates);
+        if (updated) {
+          storeUpdate(id, updated as Supplier);
+          toast.success("تم تحديث بيانات المورد");
+        }
+        return !!updated;
       } catch (err: any) {
         toast.error(err.message || "حدث خطأ أثناء التحديث");
         return false;
@@ -86,7 +95,6 @@ export function useSuppliers() {
     requestDeleteSupplier,
     confirmDeleteSupplier,
     pendingDeleteId,
-    setPendingDeleteId,
-    refresh: fetchSuppliers 
+    setPendingDeleteId
   };
 }

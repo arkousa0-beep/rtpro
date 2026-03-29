@@ -13,11 +13,17 @@ export function useNotifications() {
 
   const fetchNotifications = async () => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setLoading(false);
+        return;
+      }
+
       const data = await notificationService.getAll();
       setNotifications(data);
       setUnreadCount(data.filter(n => !n.read).length);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+    } catch (error: any) {
+      console.error('Error fetching notifications:', error?.message || error);
     } finally {
       setLoading(false);
     }

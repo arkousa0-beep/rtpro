@@ -8,6 +8,7 @@ import { CategoryList } from "@/components/management/CategoryList";
 import { ManagePageLayout } from "@/components/management/ManagePageLayout";
 import { CategoryModal } from "@/components/management/CategoryModal";
 import { CategoryDetailsDrawer } from "@/components/management/CategoryDetailsDrawer";
+import { useUIStore } from "@/lib/store/uiStore";
 import { useCategories } from "@/hooks/useCategories";
 import { Category } from "@/lib/services/categoryService";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -19,16 +20,24 @@ export default function CategoriesPage() {
     requestDeleteCategory, 
     confirmDeleteCategory, 
     pendingDeleteId, 
-    setPendingDeleteId 
+    setPendingDeleteId,
+    refresh
   } = useCategories();
   
   const { isAuthorized, isLoading: guardLoading } = useRouteGuard("inventory");
   
-  const [search, setSearch] = useState("");
+  const { pageStates, setPageState } = useUIStore();
+  const categoriesState = pageStates['categories'] || { search: '', sortBy: 'name' };
+  
+  const search = categoriesState.search;
+  const sortBy = categoriesState.sortBy || 'name';
+
+  const setSearch = (val: string) => setPageState('categories', { ...categoriesState, search: val });
+  const setSortBy = (val: string) => setPageState('categories', { ...categoriesState, sortBy: val });
+
   const [open, setOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [viewingCategory, setViewingCategory] = useState<Category | null>(null);
-  const [sortBy, setSortBy] = useState("name");
 
   if (guardLoading || !isAuthorized) {
     return (
@@ -64,6 +73,7 @@ export default function CategoriesPage() {
           if (!o) setEditingCategory(null);
         }}
         isLoading={loading}
+        onRefresh={refresh}
         iconColor="text-emerald-500"
         buttonColor="bg-emerald-600"
         onAddClick={() => {

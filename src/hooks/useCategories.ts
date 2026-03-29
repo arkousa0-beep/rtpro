@@ -1,29 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { categoryService, Category } from '@/lib/services/categoryService';
 import { toast } from 'sonner';
 import { createCategoryAction, updateCategoryAction, deleteCategoryAction } from '@/app/actions/categoryActions';
 import { useRealtimeSubscription } from './useRealtimeSubscription';
+import { useUIStore } from '@/lib/store/uiStore';
+import { useDataStore } from '@/lib/store/dataStore';
 
 export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { categories, isHydrated, setCategories, addCategory: storeAdd, updateCategory: storeUpdate, removeCategory: storeRemove } = useDataStore();
+  const [loading, setLoading] = useState(!isHydrated.categories);
   const [submitting, setSubmitting] = useState(false);
+  const { lastRefresh } = useUIStore();
 
-  const fetchCategories = async () => {
-    setLoading(true);
+  const fetchCategories = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await categoryService.getAll();
       setCategories(data || []);
     } catch (err: any) {
-      toast.error(err.message || 'حدث خطأ أثناء جلب التصنيفات');
+      console.error('Categories fetch error:', err);
+      if (!silent) toast.error(err.message || 'حدث خطأ أثناء جلب التصنيفات');
     } finally {
       setLoading(false);
     }
-  };
+  }, [setCategories]);
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    fetchCategories(!isHydrated.categories);
+  }, [fetchCategories, lastRefresh, isHydrated.categories]);
 
   // Realtime: auto-refresh when categories table changes
   useRealtimeSubscription({
@@ -35,10 +39,12 @@ export function useCategories() {
   const addCategory = async (newCategory: Partial<Category>) => {
     setSubmitting(true);
     try {
-      await createCategoryAction(newCategory);
-      toast.success('تم إضافة التصنيف بنجاح');
-      await fetchCategories();
-      return true;
+      const created = await createCategoryAction(newCategory);
+      if (created) {
+        storeAdd(created as Category);
+        toast.success('تم إضافة التصنيف بنجاح');
+      }
+      return !!created;
     } catch (err: any) {
       toast.error(err.message || 'حدث خطأ أثناء الإضافة');
       return false;
@@ -50,10 +56,12 @@ export function useCategories() {
   const updateCategory = async (id: string, data: Partial<Category>) => {
     setSubmitting(true);
     try {
-      await updateCategoryAction(id, data);
-      toast.success('تم تحديث التصنيف بنجاح');
-      await fetchCategories();
-      return true;
+      const updated = await updateCategoryAction(id, data);
+      if (updated) {
+        storeUpdate(id, updated as Category);
+        toast.success('تم تحديث التصنيف بنجاح');
+      }
+      return !!updated;
     } catch (err: any) {
       toast.error(err.message || 'حدث خطأ أثناء التحديث');
       return false;
@@ -72,8 +80,8 @@ export function useCategories() {
     setPendingDeleteId(null);
     try {
       await deleteCategoryAction(id);
+      storeRemove(id);
       toast.success('تم حذف التصنيف بنجاح');
-      await fetchCategories();
     } catch (err: any) {
       toast.error(err.message || 'حدث خطأ أثناء الحذف');
     }

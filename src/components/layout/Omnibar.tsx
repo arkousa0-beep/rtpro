@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/command";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { sanitizeLikePattern } from "@/lib/utils";
 
 export function Omnibar() {
@@ -104,6 +105,19 @@ export function Omnibar() {
                 </CommandItem>
               ))}
             </CommandGroup>
+          )}
+
+          {query.length >= 2 && (
+            <div className="p-2 border-t border-white/5">
+              <Link 
+                href={`/search?q=${encodeURIComponent(query)}`}
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-center gap-2 w-full py-2 text-sm font-medium hover:bg-white/5 rounded-lg transition-colors text-primary"
+              >
+                <Search className="w-4 h-4" />
+                مشاهدة كل النتائج لـ "{query}"
+              </Link>
+            </div>
           )}
         </CommandList>
       </CommandDialog>

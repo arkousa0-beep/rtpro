@@ -51,14 +51,24 @@ export const POSControlCockpit = ({
   onScanBarcode
 }: POSControlCockpitProps) => {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  
   return (
-    <div className="w-full mt-auto pt-4 z-50 fixed bottom-0 left-0 right-0 pb-20 bg-gradient-to-t from-black via-black to-transparent pointer-events-none">
-      <div className="max-w-xl mx-auto px-4 pointer-events-auto">
+    <div className="w-full mt-auto pt-4 z-50 md:z-10 fixed bottom-0 left-0 right-0 md:static pb-20 md:pb-0 bg-gradient-to-t from-black via-black to-transparent md:from-transparent md:bg-none pointer-events-none md:pointer-events-auto">
+      <div className="max-w-xl md:max-w-none mx-auto px-4 md:px-0 pointer-events-auto">
         <motion.div 
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="glass bento p-5 pb-6 rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border border-white/5 space-y-4 bg-black/80 backdrop-blur-3xl"
+          className="glass bento p-5 pb-6 md:p-6 rounded-[2.5rem] md:rounded-[2rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] md:shadow-none border border-white/5 space-y-4 bg-black/80 md:bg-white/5 backdrop-blur-3xl md:backdrop-blur-none"
         >
+          {/* Total Display (Desktop Only - Top of control panel) */}
+          <div className="hidden md:flex items-center justify-between p-4 bg-primary/10 rounded-2xl border border-primary/20 mb-2">
+            <span className="text-primary/60 font-black text-xs uppercase tracking-widest">المجموع الكلي</span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-black text-primary">{total.toLocaleString()}</span>
+              <span className="text-xs font-bold text-primary/60">ج.م</span>
+            </div>
+          </div>
+
           {/* Input & Form Area */}
           <div className="space-y-3">
             <form onSubmit={onAddItem} className="flex gap-2 relative">
@@ -97,7 +107,7 @@ export const POSControlCockpit = ({
               onScan={onScanBarcode}
             />
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1 relative">
                 <Select 
                   onValueChange={onCustomerIdChange} 
@@ -161,7 +171,7 @@ export const POSControlCockpit = ({
 
           {/* Checkout Button - PRIMARY THUMB ACTION */}
           <Button 
-            className="w-full h-20 rounded-[2rem] bg-primary relative overflow-hidden group active:scale-[0.98] transition-all disabled:opacity-50"
+            className="w-full h-20 md:h-24 rounded-[2rem] bg-primary relative overflow-hidden group active:scale-[0.98] transition-all disabled:opacity-50"
             disabled={loading || total === 0}
             onClick={onCheckout}
             aria-label="إتمام عملية البيع"
@@ -169,17 +179,17 @@ export const POSControlCockpit = ({
             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
             
             <div className="flex items-center justify-between w-full px-6 relative z-10">
-              <div className="bg-black/10 px-4 py-1.5 rounded-2xl backdrop-blur-md border border-black/5">
+              <div className="bg-black/10 px-4 py-1.5 rounded-2xl backdrop-blur-md border border-black/5 md:hidden">
                  <span className="text-black/40 text-[10px] font-black uppercase tracking-widest block text-right">الإجمالي</span>
                  <span className="text-2xl font-black text-black leading-none flex items-baseline gap-1">
                    {total} <small className="text-xs">ج.م</small>
                  </span>
               </div>
               
-              <div className="flex items-center gap-3">
-                <span className="text-xl font-black text-black">إتمام الدفع</span>
-                <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center text-primary group-hover:rotate-[-10deg] transition-transform shadow-2xl">
-                  {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <ArrowRight className="w-6 h-6" />}
+              <div className="flex items-center justify-center w-full md:justify-between gap-3">
+                <span className="text-xl md:text-2xl font-black text-black">إتمام الدفع الآن</span>
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-black rounded-xl flex items-center justify-center text-primary group-hover:rotate-[-10deg] transition-transform shadow-2xl">
+                  {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <ArrowRight className="w-6 h-6 md:w-7 md:h-7" />}
                 </div>
               </div>
             </div>
@@ -189,3 +199,4 @@ export const POSControlCockpit = ({
     </div>
   );
 };
+

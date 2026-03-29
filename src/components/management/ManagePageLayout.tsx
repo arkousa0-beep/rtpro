@@ -27,6 +27,7 @@ import {
   DialogDescription 
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PullToRefresh } from "@/components/ui/PullToRefresh";
 
 interface ManagePageLayoutProps {
   title: string;
@@ -53,6 +54,7 @@ interface ManagePageLayoutProps {
   sortOptions?: { value: string; label: string }[];
   extraContent?: React.ReactNode;
   backHref?: string;
+  onRefresh?: () => Promise<void> | void;
 }
 
 export function ManagePageLayout({
@@ -80,6 +82,7 @@ export function ManagePageLayout({
   sortOptions = [],
   extraContent,
   backHref,
+  onRefresh,
 }: ManagePageLayoutProps) {
   const AddIcon = addIcon || Plus;
   const AddButton = (
@@ -175,14 +178,28 @@ export function ManagePageLayout({
 
       {/* Main Content */}
       <div className="relative min-h-[400px]">
-        {isLoading ? (
-          <div className="grid gap-4 mt-6">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="w-full h-24 rounded-[2rem]" />
-            ))}
-          </div>
+        {onRefresh ? (
+          <PullToRefresh onRefresh={onRefresh}>
+            {isLoading ? (
+              <div className="grid gap-4 mt-6">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="w-full h-24 rounded-[2rem]" />
+                ))}
+              </div>
+            ) : (
+              children
+            )}
+          </PullToRefresh>
         ) : (
-          children
+          isLoading ? (
+            <div className="grid gap-4 mt-6">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="w-full h-24 rounded-[2rem]" />
+              ))}
+            </div>
+          ) : (
+            children
+          )
         )}
       </div>
 

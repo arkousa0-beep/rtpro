@@ -1,32 +1,37 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { productService } from '@/lib/services/productService';
 import { createProductAction, updateProductAction, deleteProductAction } from '@/app/actions/productActions';
 import { Product } from '@/lib/database.types';
 import { toast } from 'sonner';
 import { useRealtimeSubscription } from './useRealtimeSubscription';
+import { useUIStore } from '@/lib/store/uiStore';
+import { useDataStore } from '@/lib/store/dataStore';
 
 export function useProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { products, isHydrated, setProducts, addProduct: storeAdd, updateProduct: storeUpdate, removeProduct: storeRemove } = useDataStore();
+  const [loading, setLoading] = useState(!isHydrated.products);
   const [submitting, setSubmitting] = useState(false);
-  /** ID of the product pending deletion — drives the ConfirmDialog in the UI */
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const { lastRefresh } = useUIStore();
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
+  const fetchProducts = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await productService.getAll();
       setProducts((data as Product[]) || []);
     } catch (err: any) {
-      toast.error(err.message || 'حدث خطأ أثناء جلب المنتجات');
+      console.error('Products fetch error:', err);
+      // Don't toast on silent background refresh to avoid annoying the user
+      if (!silent) toast.error(err.message || 'حدث خطأ أثناء جلب المنتجات');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setProducts]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    // If not hydrated, do a full load. If hydrated, do a silent refresh.
+    fetchProducts(!isHydrated.products);
+  }, [fetchProducts, lastRefresh, isHydrated.products]);
 
   // Realtime: auto-refresh when products table changes
   useRealtimeSubscription({
@@ -40,7 +45,7 @@ export function useProducts() {
     try {
       const created = await createProductAction(newProduct);
       if (created) {
-        setProducts(prev => [created as Product, ...prev]);
+        storeAdd(created as Product);
         toast.success('تم إضافة المنتج بنجاح');
       }
       return created;
@@ -57,7 +62,7 @@ export function useProducts() {
     try {
       const updated = await updateProductAction(id, product);
       if (updated) {
-        setProducts(prev => prev.map(p => p.id === id ? updated as Product : p));
+        storeUpdate(id, updated as Product);
         toast.success('تم تحديث البيانات بنجاح');
       }
       return !!updated;
@@ -79,7 +84,7 @@ export function useProducts() {
     setPendingDeleteId(null);
     try {
       await deleteProductAction(id);
-      setProducts(prev => prev.filter(p => p.id !== id));
+      storeRemove(id);
       toast.success('تم حذف المنتج بنجاح');
     } catch (err: any) {
       toast.error(err.message || 'حدث خطأ أثناء الحذف');

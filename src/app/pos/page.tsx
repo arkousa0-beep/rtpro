@@ -115,16 +115,16 @@ export default function POSPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-5rem)] bg-black text-white p-4">
+    <div className="flex flex-col md:flex-row min-h-[calc(100vh-5rem)] bg-black text-white p-2 md:p-6 gap-6">
       
-      <div className="flex-1 max-w-xl w-full mx-auto space-y-6 pt-20 pb-4">
-        {/* Cart Header Section */}
-        <div className="flex items-center justify-between px-4">
+      {/* LEFT COLUMN: Cart Header & Items List (Carts / Items) */}
+      <div className="flex-1 flex flex-col space-y-6 pt-20 md:pt-0 pb-4 min-w-0">
+        <div className="flex items-center justify-between px-2 md:px-0">
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                 <ShoppingCart className="w-5 h-5" />
              </div>
-             <h2 className="text-2xl font-black text-white">سلة المشتريات</h2>
+             <h2 className="text-xl md:text-2xl font-black text-white">سلة المشتريات</h2>
           </div>
           <div className="flex items-center gap-2">
             <ParkedCartsDialog />
@@ -132,45 +132,45 @@ export default function POSPage() {
               <Button
                 variant="outline"
                 onClick={handleParkCart}
-                className="h-10 px-4 rounded-xl bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white transition-all active:scale-95 flex items-center gap-2 font-bold"
+                className="h-10 px-3 md:px-4 rounded-xl bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white transition-all active:scale-95 flex items-center gap-2 font-bold text-xs md:text-sm"
                 title="تعليق السلة لخدمة عميل آخر"
               >
                 <PauseCircle className="w-4 h-4 text-white/40" />
-                تعليق السلة
+                <span className="hidden sm:inline">تعليق السلة</span>
               </Button>
             )}
-            <Badge className="bg-white/5 text-white/40 h-8 rounded-xl px-4 font-bold border-none transition-all">
+            <Badge className="bg-primary/10 text-primary h-8 rounded-xl px-4 font-bold border border-primary/20 shrink-0">
               {cart.length} أصناف
             </Badge>
           </div>
         </div>
 
-        {/* Dynamic Cart List with Framer Motion Layout animations */}
+        {/* Dynamic Cart List */}
         <AnimatePresence mode="popLayout">
           {cart.length === 0 ? (
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="py-20 text-center space-y-4"
+              className="flex-1 flex flex-col items-center justify-center py-20 text-center space-y-4 glass rounded-[3rem] border border-white/5"
             >
               <div className="w-24 h-24 rounded-[2.5rem] bg-white/5 flex items-center justify-center mx-auto mb-6">
                 <ShoppingCart className="w-10 h-10 text-white/10" />
               </div>
               <h3 className="text-xl font-black text-white/40">السلة فارغة حالياً</h3>
-              <p className="text-sm text-white/10 font-bold">ابدأ بمسح باركود المنتجات لإضافتها</p>
+              <p className="text-sm text-white/10 font-bold px-6">ابدأ بمسح باركود المنتجات لإضافتها</p>
 
               {parkedCarts.length > 0 && (
-                <div className="mt-8 pt-8 border-t border-white/5 mx-auto max-w-xs">
-                  <p className="text-xs text-amber-500/60 mb-2 font-bold">لديك سلال معلقة يمكنك استعادتها</p>
+                <div className="mt-8 pt-8 border-t border-white/5 mx-auto w-full max-w-xs px-6">
+                  <p className="text-xs text-amber-500/60 mb-2 font-bold">لديك سلال معلقة يمكنك استعادتها من الأعلى</p>
                 </div>
               )}
             </motion.div>
           ) : (
-            <div className="grid gap-3 px-1 pb-32">
+            <div className="flex-1 space-y-3 overflow-y-auto max-h-[calc(100vh-250px)] md:max-h-none pr-1">
               <div className="flex justify-between items-center px-2 py-1 mb-2 border-b border-white/5">
                 <button
                   onClick={() => setIsClearDialogOpen(true)}
-                  className="text-xs text-red-500/70 hover:text-red-500 font-bold"
+                  className="text-xs text-red-500/70 hover:text-red-500 font-bold transition-colors"
                 >
                   إفراغ السلة
                 </button>
@@ -187,22 +187,24 @@ export default function POSPage() {
         </AnimatePresence>
       </div>
 
-      {/* Unified Bottom Control UI */}
-      <POSControlCockpit 
-        total={total}
-        loading={loading || isProcessing}
-        paymentMethod={paymentMethod}
-        selectedCustomerId={selectedCustomerId}
-        paidAmount={paidAmount}
-        onPaidAmountChange={setPaidAmount}
-        onAddItem={handleAddItem}
-        onCheckout={handleCheckout}
-        onPaymentMethodChange={setPaymentMethod}
-        onCustomerIdChange={setCustomerId}
-        inputRef={inputRef}
-        customers={customers}
-        onScanBarcode={handleCameraScan}
-      />
+      {/* RIGHT COLUMN: Control Panel & Checkout (Integrated on Desktop) */}
+      <div className="w-full md:w-[380px] lg:w-[450px] shrink-0">
+        <POSControlCockpit 
+          total={total}
+          loading={loading || isProcessing}
+          paymentMethod={paymentMethod}
+          selectedCustomerId={selectedCustomerId}
+          paidAmount={paidAmount}
+          onPaidAmountChange={setPaidAmount}
+          onAddItem={handleAddItem}
+          onCheckout={handleCheckout}
+          onPaymentMethodChange={setPaymentMethod}
+          onCustomerIdChange={setCustomerId}
+          inputRef={inputRef}
+          customers={customers}
+          onScanBarcode={handleCameraScan}
+        />
+      </div>
 
       <ConfirmDialog
         open={isClearDialogOpen}
@@ -217,6 +219,7 @@ export default function POSPage() {
           toast.success("تم إفراغ السلة");
         }}
       />
+
 
       <ConfirmDialog
         open={isCreditConfirmOpen}

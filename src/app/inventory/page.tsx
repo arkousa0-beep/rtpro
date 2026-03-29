@@ -12,6 +12,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { ProductModal } from "@/components/management/ProductModal";
 import { Button } from "@/components/ui/button";
 import { Product } from "@/lib/services/productService";
+import { useUIStore } from "@/lib/store/uiStore";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { useRouteGuard } from "@/hooks/useRouteGuard";
@@ -19,8 +20,19 @@ import { useRouteGuard } from "@/hooks/useRouteGuard";
 export default function InventoryPage() {
   const { isAuthorized, isLoading: guardLoading } = useRouteGuard("inventory");
   const { items, categories, loading, refresh } = useInventory();
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  
+  const { pageStates, setPageState } = useUIStore();
+  const inventoryState = pageStates['inventory'] || { search: '', filters: {} };
+  
+  const search = inventoryState.search;
+  const activeCategory = inventoryState.filters?.category || null;
+
+  const setSearch = (val: string) => setPageState('inventory', { ...inventoryState, search: val });
+  const setActiveCategory = (val: string | null) => setPageState('inventory', { 
+    ...inventoryState, 
+    filters: { ...inventoryState.filters, category: val } 
+  });
+  
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -98,6 +110,7 @@ export default function InventoryPage() {
       addButtonLabel="إضافة قطعة"
       addLink="/inventory/add"
       isLoading={loading}
+      onRefresh={refresh}
       extraContent={categoryFilters}
       isDialogOpen={false}
       onDialogOpenChange={() => {}}

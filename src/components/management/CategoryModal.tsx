@@ -5,13 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
   Form,
   FormControl,
   FormField,
@@ -20,12 +13,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tag, Loader2, Check } from "lucide-react";
 import { Category, categoryService } from "@/lib/services/categoryService";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
 
 const formSchema = z.object({
   name: z.string().min(2, "يجب أن يكون الاسم حرفين على الأقل"),
@@ -85,28 +78,25 @@ export function CategoryModal({ open, onOpenChange, initialData }: CategoryModal
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass border-white/10 bg-zinc-950/90 text-white sm:max-w-[500px] rounded-[2.5rem] overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
-        
-        <DialogHeader className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-              <Tag className="w-6 h-6 text-indigo-500" />
-            </div>
-            <div>
-              <DialogTitle className="text-3xl font-black italic uppercase tracking-tighter">
-                {initialData ? "تعديل تصنيف" : "إضافة تصنيف جديد"}
-              </DialogTitle>
-              <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mt-1">
-                Category Management System
-              </p>
-            </div>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={initialData ? "تعديل تصنيف" : "إضافة تصنيف جديد"}
+      description="Category Management System"
+    >
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+            <Tag className="w-6 h-6 text-indigo-500" />
           </div>
-        </DialogHeader>
+          <div>
+            <h4 className="text-xl font-black italic text-white/80">تفاصيل التصنيف</h4>
+            <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Enter details below</p>
+          </div>
+        </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormField
               control={form.control}
               name="name"
@@ -128,21 +118,19 @@ export function CategoryModal({ open, onOpenChange, initialData }: CategoryModal
               )}
             />
 
-
-
-            <DialogFooter className="pt-6 border-t border-white/5 flex-row sm:justify-between items-center gap-4">
+            <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center gap-4">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => onOpenChange(false)}
-                className="h-14 rounded-2xl font-black text-white/40 hover:text-white uppercase tracking-widest"
+                className="h-14 w-full sm:w-auto px-8 rounded-2xl font-black text-white/40 hover:text-white uppercase tracking-widest"
               >
                 إلغاء
               </Button>
               <Button 
                 type="submit" 
                 disabled={loading}
-                className="h-14 px-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-lg gap-3 shadow-xl shadow-indigo-600/20 transition-all hover:scale-105 active:scale-95 flex-1 sm:flex-initial"
+                className="h-14 px-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-lg gap-3 shadow-xl shadow-indigo-600/20 transition-all hover:scale-105 active:scale-95 flex-1 w-full"
               >
                 {loading ? (
                   <Loader2 className="w-6 h-6 animate-spin" />
@@ -153,10 +141,10 @@ export function CategoryModal({ open, onOpenChange, initialData }: CategoryModal
                   </>
                 )}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </ResponsiveDialog>
   );
 }

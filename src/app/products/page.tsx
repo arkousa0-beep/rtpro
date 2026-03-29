@@ -14,6 +14,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { Product } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useUIStore } from "@/lib/store/uiStore";
 
 export default function ProductsPage() {
   const {
@@ -23,16 +24,27 @@ export default function ProductsPage() {
     confirmDeleteProduct,
     pendingDeleteId,
     setPendingDeleteId,
+    refresh
   } = useProducts();
-  const { categories, loading: categoriesLoading } = useCategories();
+  const { categories, loading: categoriesLoading, refresh: refreshCategories } = useCategories();
   
   const { isAuthorized, isLoading: guardLoading } = useRouteGuard("inventory");
 
-  const [search, setSearch] = useState("");
+  const { pageStates, setPageState } = useUIStore();
+  const productsState = pageStates['products'] || { search: '', filters: {} };
+  
+  const search = productsState.search;
+  const activeCategory = productsState.filters?.category || null;
+
+  const setSearch = (val: string) => setPageState('products', { ...productsState, search: val });
+  const setActiveCategory = (val: string | null) => setPageState('products', { 
+    ...productsState, 
+    filters: { ...productsState.filters, category: val } 
+  });
+
   const [open, setOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const loading = productsLoading || categoriesLoading;
 
@@ -106,6 +118,10 @@ export default function ProductsPage() {
           if (!o) setEditingProduct(null);
         }}
         isLoading={loading}
+        onRefresh={async () => {
+          await refresh();
+          await refreshCategories();
+        }}
         iconColor="text-indigo-500"
         buttonColor="bg-indigo-600"
         onAddClick={() => {
