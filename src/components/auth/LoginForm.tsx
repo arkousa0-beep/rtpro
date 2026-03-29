@@ -1,43 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useActionState, useEffect } from "react";
+import { loginAction } from "@/app/actions/authActions";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, LogIn, Mail, Lock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const supabase = createClient();
+  const [state, action, isPending] = useActionState(loginAction, null);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (loginError) throw loginError;
-
-      toast.success("تم تسجيل الدخول بنجاح");
-      router.push("/");
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message || "فشل تسجيل الدخول. يرجى التحقق من بياناتك.");
-      toast.error("خطأ في تسجيل الدخول");
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (state?.error) {
+      toast.error(state.error);
     }
-  };
+  }, [state]);
 
   return (
     <motion.div
@@ -58,7 +34,7 @@ export function LoginForm() {
           <p className="text-white/60 text-sm">ادخل بياناتك للوصول إلى لوحة التحكم</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-5 relative z-10">
+        <form action={action} className="space-y-5 relative z-10">
           <div className="space-y-2">
             <label className="text-sm font-medium text-white/80 mr-1" htmlFor="email">
               البريد الإلكتروني
@@ -67,10 +43,9 @@ export function LoginForm() {
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40 group-focus-within:text-primary transition-colors" />
               <input
                 id="email"
+                name="email"
                 type="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 className="w-full h-12 bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
                 placeholder="name@example.com"
                 dir="ltr"
@@ -86,10 +61,9 @@ export function LoginForm() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40 group-focus-within:text-primary transition-colors" />
               <input
                 id="password"
+                name="password"
                 type="password"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 className="w-full h-12 bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
                 placeholder="••••••••"
                 dir="ltr"
@@ -98,7 +72,7 @@ export function LoginForm() {
           </div>
 
           <AnimatePresence mode="wait">
-            {error && (
+            {state?.error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -106,17 +80,17 @@ export function LoginForm() {
                 className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-center gap-2 text-red-400 text-[11px] leading-relaxed"
               >
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
+                <span>{state.error}</span>
               </motion.div>
             )}
           </AnimatePresence>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={isPending}
             className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2 mt-4"
           >
-            {loading ? (
+            {isPending ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <>

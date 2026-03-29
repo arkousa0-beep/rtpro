@@ -12,13 +12,18 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { PullToRefresh } from "@/components/ui/PullToRefresh";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/lib/store/uiStore";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useHaptics } from "@/hooks/useHaptics";
+// Trigger re-validation
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { unreadCount } = useNotifications();
   const { isSidebarCollapsed } = useUIStore();
+  const router = useRouter();
+  const { impact } = useHaptics();
   
   // List of routes that should NOT show the app shell (header, nav, etc.)
   const standaloneRoutes = ["/login", "/auth/callback"];
@@ -83,7 +88,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           "pt-20 pb-24 min-h-screen relative transition-all duration-500 ease-in-out",
           sidebarWidthClass
         )}>
-          <PullToRefresh>
+          <PullToRefresh 
+            onRefresh={async () => {
+              impact('medium');
+              router.refresh();
+              // Give it a small delay for visual feedback
+              await new Promise(r => setTimeout(r, 800));
+            }}
+          >
             <motion.div 
               layout
               initial={{ opacity: 0, y: 20 }}

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { ProfilePermissions } from "@/lib/database.types";
+import { useHaptics } from "@/hooks/useHaptics";
 
 interface NavLink {
   name: string;
@@ -27,6 +28,7 @@ const ALL_LINKS: NavLink[] = [
 export function BottomNav() {
   const pathname = usePathname();
   const [links, setLinks] = useState<NavLink[]>(ALL_LINKS);
+  const { selection } = useHaptics();
 
   useEffect(() => {
     async function loadPermissions() {
@@ -72,6 +74,7 @@ export function BottomNav() {
           <Link
             key={link.name}
             href={link.href}
+            onClick={() => selection()}
             className={cn(
               "relative flex flex-col items-center justify-center gap-1.5 w-16 h-12 transition-all duration-300",
               isActive ? "text-primary" : "text-muted-foreground/60 hover:text-white"
@@ -79,18 +82,30 @@ export function BottomNav() {
           >
             {isActive && (
               <motion.div
-                layoutId="nav-active"
-                className="absolute -top-1 w-8 h-1 bg-primary rounded-full blur-[2px]"
+                layoutId="nav-active-pill"
+                className="absolute -top-3 w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_10px_rgba(249,115,22,0.8)]"
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               />
             )}
-            <Icon className={cn("w-6 h-6 transition-transform", isActive && "scale-110")} />
-            <span className={cn("text-[12px] font-bold tracking-wide transition-opacity", !isActive && "opacity-70")}>
+            
+            <div className="relative">
+              <Icon className={cn("w-6 h-6 transition-all duration-300", 
+                isActive ? "scale-110 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]" : "scale-100"
+              )} />
+              {isActive && (
+                <motion.div
+                  layoutId="nav-bg-glow"
+                  className="absolute inset-0 bg-primary/20 blur-xl rounded-full -z-10"
+                  initial={false}
+                />
+              )}
+            </div>
+
+            <span className={cn("text-[11px] font-black tracking-wide transition-all duration-300", 
+              isActive ? "text-primary translate-y-0.5" : "text-white/40 opacity-70"
+            )}>
               {link.name}
             </span>
-            {isActive && (
-              <div className="absolute inset-0 bg-primary/10 blur-xl rounded-full -z-10" />
-            )}
           </Link>
         );
       })}
