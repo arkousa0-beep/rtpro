@@ -26,14 +26,18 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { customerService } from "@/lib/services/customerService";
 import { debtService } from "@/lib/services/debtService";
 import { useRouteGuard } from "@/hooks/useRouteGuard";
+import { useDataStore } from "@/lib/store/dataStore";
 
 export default function CustomerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { isAuthorized, isLoading: isAuthLoading } = useRouteGuard('customers');
   const { id } = use(params);
   const router = useRouter();
-  const [customer, setCustomer] = useState<Customer | null>(null);
+  
+  const { customers, updateCustomer, removeCustomer, addCustomer } = useDataStore();
+  const customer = customers.find(c => c.id === id) || null;
+  
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!customer);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
   const [isTransactionOpen, setIsTransactionOpen] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -79,7 +83,14 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
       .eq('customer_id', id)
       .order('created_at', { ascending: false });
 
-    if (customerData) setCustomer(customerData);
+    if (customerData) {
+      if (customers.some(c => c.id === id)) {
+        updateCustomer(id, customerData);
+      } else {
+        addCustomer(customerData);
+      }
+    }
+    
     if (transData) setTransactions(transData as any[]);
     
     setLoading(false);
@@ -115,6 +126,7 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
     setDeleting(true);
     try {
       await customerService.delete(id);
+      removeCustomer(id);
       toast.success("تم حذف العميل بنجاح");
       router.push("/customers");
     } catch (err: any) {

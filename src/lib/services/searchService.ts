@@ -34,18 +34,25 @@ export const searchService = {
     // --- 1. Products ---
     if (entities.includes('product')) {
       const fetchProducts = async () => {
-        let q = supabase.from('products').select('id, name, created_at, categories(name)').ilike('name', `%${sanitizedQuery}%`).is('deleted_at', null).limit(limitPerEntity);
+        let q = supabase.from('products').select('id, name, price, created_at, categories(name)').ilike('name', `%${sanitizedQuery}%`).is('deleted_at', null).limit(limitPerEntity);
         if (startDate) q = q.gte('created_at', startDate);
         if (endDate) q = q.lte('created_at', endDate);
         const { data } = await q;
-        return (data || []).map(p => ({
-          id: p.id,
-          title: p.name,
-          subtitle: (p.categories as any)?.name || 'بدون تصنيف',
-          type: 'product' as const,
-          date: p.created_at,
-          link: `/inventory/product/${p.id}`
-        }));
+        return (data || []).map(p => {
+          const categoryName = Array.isArray(p.categories) 
+            ? p.categories[0]?.name 
+            : (p.categories as any)?.name;
+            
+          return {
+            id: p.id,
+            title: p.name,
+            subtitle: categoryName || 'بدون تصنيف',
+            type: 'product' as const,
+            date: p.created_at,
+            link: `/products?search=${p.id}`,
+            metadata: { price: p.price, category: categoryName }
+          };
+        });
       };
       promises.push(fetchProducts());
     }
@@ -60,10 +67,10 @@ export const searchService = {
         return (data || []).map(i => ({
           id: i.barcode,
           title: `سيريال: ${i.barcode}`,
-          subtitle: `المنتج: ${(i.products as any)?.name || 'غير معروف'}`,
+          subtitle: `المنتج: ${Array.isArray(i.products) ? i.products[0]?.name : (i.products as any)?.name || 'غير معروف'}`,
           type: 'item' as const,
           date: i.created_at,
-          link: `/inventory/item/${i.barcode}`,
+          link: `/inventory?search=${i.barcode}`,
           metadata: { status: i.status }
         }));
       };

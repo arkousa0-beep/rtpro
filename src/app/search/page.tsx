@@ -220,16 +220,27 @@ export default function SearchPage() {
                       
                       {/* Rich Metadata Section */}
                       <div className="flex items-center gap-3 mt-1 text-[11px] font-medium">
+                        {res.type === 'product' && res.metadata?.price !== undefined && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-indigo-400 font-bold">السعر: {Number(res.metadata.price).toLocaleString()} ج.م</span>
+                            {res.metadata.category && (
+                              <>
+                                <span className="text-white/10">•</span>
+                                <span className="text-white/40">{res.metadata.category}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
                         {(res.type === 'customer' || res.type === 'supplier') && res.metadata?.balance !== undefined && (
-                          <span className={Number(res.metadata.balance) > 0 ? "text-red-400" : "text-green-400"}>
-                            الرصيد: {res.metadata.balance} ج.م
+                          <span className={Number(res.metadata.balance) > 0 ? "text-red-400" : "text-emerald-400"}>
+                            الرصيد: {Number(res.metadata.balance).toLocaleString()} ج.م
                           </span>
                         )}
                         {res.type === 'transaction' && res.metadata?.total && (
                           <div className="flex items-center gap-2">
-                            <span className="text-primary">المبلغ: {res.metadata.total} ج.م</span>
-                            <span className="text-white/30">•</span>
-                            <span className="text-muted-foreground">{res.metadata.method}</span>
+                            <span className="text-blue-400 font-black">المبلغ: {Number(res.metadata.total).toLocaleString()} ج.م</span>
+                            <span className="text-white/10">•</span>
+                            <span className="text-white/40">{res.metadata.method === 'Cash' ? 'كاش' : res.metadata.method === 'Debt' ? 'آجل' : res.metadata.method || ''}</span>
                           </div>
                         )}
                       </div>

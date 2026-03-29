@@ -20,6 +20,8 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { supplierService } from "@/lib/services/supplierService";
 import { useToast } from "@/hooks/use-toast";
+import { useDataStore } from "@/lib/store/dataStore";
+import { Supplier } from "@/lib/database.types";
 
 interface SupplierPaymentModalProps {
   supplierId: string;
@@ -41,6 +43,7 @@ export function SupplierPaymentModal({
   const [amount, setAmount] = useState<string>("");
   const [method, setMethod] = useState<PaymentMethod>('Cash');
   const [loading, setLoading] = useState(false);
+  const { updateSupplier, suppliers } = useDataStore();
   const { toast } = useToast();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -50,6 +53,15 @@ export function SupplierPaymentModal({
     setLoading(true);
     try {
       await supplierService.recordPayment(supplierId, Number(amount), method);
+      
+      // Update global store for instant UI reactivity
+      const currentSupplier = suppliers.find(s => s.id === supplierId);
+      if (currentSupplier) {
+        updateSupplier(supplierId, { 
+          balance: Number(currentSupplier.balance || 0) - Number(amount) 
+        });
+      }
+
       toast({
         title: "تم تسجيل الدفعة بنجاح",
         description: `تم سداد ${amount} ج.م للمورد ${supplierName}`,
