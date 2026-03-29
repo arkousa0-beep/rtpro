@@ -1,5 +1,8 @@
 "use client";
 
+import { useRouteGuard } from "@/hooks/useRouteGuard";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { inventoryService } from "@/lib/services/inventoryService";
@@ -17,13 +20,12 @@ import {
   History 
 } from "lucide-react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
-
 export default function ItemDetailsPage() {
   const params = useParams();
   const barcode = params.barcode as string;
   const router = useRouter();
+  
+  const { isAuthorized, isLoading: guardLoading } = useRouteGuard("inventory");
 
   const [item, setItem] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +46,7 @@ export default function ItemDetailsPage() {
     }
   }
 
-  if (loading) {
+  if (loading || guardLoading || !isAuthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />

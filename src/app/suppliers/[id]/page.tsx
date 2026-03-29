@@ -14,8 +14,10 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn, sanitizeLikePattern } from "@/lib/utils";
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 
 export default function SupplierProfilePage() {
+  const { isAuthorized, isLoading: isAuthLoading } = useRouteGuard('suppliers');
   const params = useParams();
   const id = params.id as string;
 
@@ -87,13 +89,15 @@ export default function SupplierProfilePage() {
     }
   };
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />
       </div>
     );
   }
+
+  if (!isAuthorized) return null;
 
   if (!supplier) {
     return (

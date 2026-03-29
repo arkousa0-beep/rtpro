@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
@@ -20,6 +21,8 @@ export default function ProductDetailsPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
+  
+  const { isAuthorized, isLoading: guardLoading } = useRouteGuard("inventory");
 
   const [product, setProduct] = useState<(Product & { categories?: Category }) | null>(null);
   const [items, setItems] = useState<any[]>([]);
@@ -91,7 +94,7 @@ export default function ProductDetailsPage() {
     }
   }
 
-  if (loading && !product) {
+  if ((loading && !product) || guardLoading || !isAuthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />

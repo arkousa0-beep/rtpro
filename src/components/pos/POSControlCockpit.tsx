@@ -1,8 +1,8 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Scan, ArrowRight, Loader2, Coins, CreditCard, HandCoins } from 'lucide-react';
+import { Scan, ArrowRight, Loader2, Coins, CreditCard, HandCoins, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -12,6 +12,7 @@ import {
   SelectTrigger
 } from '@/components/ui/select';
 import { QuickAddDialog } from './QuickAddDialog';
+import { CameraScannerDialog } from '@/components/ui/CameraScannerDialog';
 import { Customer } from "@/lib/services/customerService";
 
 interface POSControlCockpitProps {
@@ -27,6 +28,7 @@ interface POSControlCockpitProps {
   onPaidAmountChange: (amount: number) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
   customers: Customer[];
+  onScanBarcode: (barcode: string) => void;
 }
 
 /**
@@ -45,8 +47,10 @@ export const POSControlCockpit = ({
   paidAmount,
   onPaidAmountChange,
   inputRef,
-  customers
+  customers,
+  onScanBarcode
 }: POSControlCockpitProps) => {
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   return (
     <div className="w-full mt-auto pt-4 z-50 fixed bottom-0 left-0 right-0 pb-20 bg-gradient-to-t from-black via-black to-transparent pointer-events-none">
       <div className="max-w-xl mx-auto px-4 pointer-events-auto">
@@ -59,6 +63,14 @@ export const POSControlCockpit = ({
           <div className="space-y-3">
             <form onSubmit={onAddItem} className="flex gap-2 relative">
               <QuickAddDialog />
+              <Button
+                type="button"
+                onClick={() => setIsCameraOpen(true)}
+                className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 hover:bg-primary/20 hover:border-primary/30 text-white/50 hover:text-primary shadow-lg active:scale-95 transition-all shrink-0"
+                aria-label="فتح الكاميرا لمسح الباركود"
+              >
+                <Camera className="w-6 h-6" />
+              </Button>
               <div className="relative flex-1 group">
                 <Scan className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-primary transition-colors" />
                 <Input 
@@ -78,6 +90,12 @@ export const POSControlCockpit = ({
                 <ArrowRight className="w-6 h-6" />
               </Button>
             </form>
+
+            <CameraScannerDialog
+              open={isCameraOpen}
+              onClose={() => setIsCameraOpen(false)}
+              onScan={onScanBarcode}
+            />
 
             <div className="flex gap-2">
               <div className="flex-1 relative">

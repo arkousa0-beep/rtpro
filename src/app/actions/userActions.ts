@@ -30,13 +30,13 @@ export async function createEmployeeAction(formData: {
 
   // 2. Create profile in Public
   const defaultPermissions: ProfilePermissions = {
-    pos: true,
+    pos: formData.role === "Manager",
     inventory: formData.role === "Manager",
     finance: formData.role === "Manager",
     staff: formData.role === "Manager",
-    customers: true,
+    customers: formData.role === "Manager",
     suppliers: formData.role === "Manager",
-    transactions: true,
+    transactions: formData.role === "Manager",
   };
 
   const { error: profileError } = await (supabase as any).from("profiles").insert({

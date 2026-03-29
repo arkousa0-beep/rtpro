@@ -25,8 +25,10 @@ import { PaymentModal } from "@/components/debts/PaymentModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { customerService } from "@/lib/services/customerService";
 import { debtService } from "@/lib/services/debtService";
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 
 export default function CustomerProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { isAuthorized, isLoading: isAuthLoading } = useRouteGuard('customers');
   const { id } = use(params);
   const router = useRouter();
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -137,13 +139,15 @@ export default function CustomerProfilePage({ params }: { params: Promise<{ id: 
     }
   };
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />
       </div>
     );
   }
+
+  if (!isAuthorized) return null;
 
   if (!customer) {
     return (

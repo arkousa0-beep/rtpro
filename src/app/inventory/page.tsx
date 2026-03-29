@@ -13,8 +13,11 @@ import { ProductModal } from "@/components/management/ProductModal";
 import { Button } from "@/components/ui/button";
 import { Product } from "@/lib/services/productService";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 
 export default function InventoryPage() {
+  const { isAuthorized, isLoading: guardLoading } = useRouteGuard("inventory");
   const { items, categories, loading, refresh } = useInventory();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -75,6 +78,14 @@ export default function InventoryPage() {
       ))}
     </div>
   );
+
+  if (guardLoading || !isAuthorized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <ManagePageLayout

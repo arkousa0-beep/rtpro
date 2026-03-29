@@ -5,6 +5,7 @@ import {
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
+  DrawerDescription,
 } from "@/components/ui/drawer";
 import { Product } from "@/lib/services/productService";
 import { Box, Calendar, Tag, Activity, Edit3, Trash2, X } from "lucide-react";
@@ -31,8 +32,11 @@ export function ProductDetailsDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="bg-black/80 backdrop-blur-2xl border-white/5 rounded-t-[2.5rem] p-6 outline-none">
+      <DrawerContent aria-describedby={undefined} className="bg-black/80 backdrop-blur-2xl border-white/5 rounded-t-[2.5rem] p-6 outline-none">
         <DrawerHeader className="pb-8 relative">
+          <DrawerDescription className="sr-only">
+            تفاصيل المنتج والمواصفات الكاملة
+          </DrawerDescription>
           <Button
             variant="ghost"
             size="icon"

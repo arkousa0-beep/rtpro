@@ -18,7 +18,8 @@ import {
   Package, 
   Barcode, 
   CreditCard,
-  Loader2
+  Loader2,
+  Camera
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -33,7 +34,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { ProductModal } from "@/components/management/ProductModal";
+import { CameraScannerDialog } from "@/components/ui/CameraScannerDialog";
 import { Suspense } from "react";
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 
 function AddItemForm() {
   const router = useRouter();
@@ -55,6 +58,7 @@ function AddItemForm() {
 
   const [mode, setMode] = useState<"single" | "batch">("single");
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -237,6 +241,14 @@ function AddItemForm() {
                       className="h-16 pr-14 rounded-[1.5rem] bg-white/[0.03] border-white/5 text-white placeholder:text-white/20 focus-visible:ring-primary focus-visible:border-primary/50 text-right text-lg font-mono glass transition-all"
                     />
                   </div>
+                  <Button
+                    type="button"
+                    onClick={() => setIsCameraOpen(true)}
+                    className="w-full h-14 rounded-[1.5rem] bg-white/[0.03] border border-white/10 hover:bg-primary/10 hover:border-primary/30 text-white/60 hover:text-primary font-black gap-3 transition-all active:scale-[0.98]"
+                  >
+                    <Camera className="w-5 h-5" />
+                    مسح بالكاميرا
+                  </Button>
                 </TabsContent>
 
                 <TabsContent value="batch" className="space-y-3 mt-0">
@@ -248,12 +260,38 @@ function AddItemForm() {
                     onChange={(e) => setFormData({...formData, batchBarcodes: e.target.value})}
                     className="min-h-40 rounded-[1.5rem] bg-white/[0.03] border-white/5 text-white placeholder:text-white/20 focus-visible:ring-primary focus-visible:border-primary/50 text-right text-lg font-mono p-6 glass transition-all resize-none"
                   />
+                  <Button
+                    type="button"
+                    onClick={() => setIsCameraOpen(true)}
+                    className="w-full h-14 rounded-[1.5rem] bg-white/[0.03] border border-white/10 hover:bg-primary/10 hover:border-primary/30 text-white/60 hover:text-primary font-black gap-3 transition-all active:scale-[0.98]"
+                  >
+                    <Camera className="w-5 h-5" />
+                    مسح مستمر بالكاميرا
+                  </Button>
                   <div className="flex items-center gap-2 mr-1">
                     <div className="w-1 h-1 rounded-full bg-primary animate-pulse" />
                     <p className="text-[10px] font-black text-white/40 uppercase tracking-tight">سيتم إضافة كل باركود كقطعة منفصلة من هذا المنتج.</p>
                   </div>
                 </TabsContent>
               </Tabs>
+
+              <CameraScannerDialog
+                open={isCameraOpen}
+                onClose={() => setIsCameraOpen(false)}
+                onScan={(barcode) => {
+                  if (mode === 'single') {
+                    setFormData(prev => ({ ...prev, barcode }));
+                    setIsCameraOpen(false);
+                  } else {
+                    setFormData(prev => ({
+                      ...prev,
+                      batchBarcodes: prev.batchBarcodes
+                        ? prev.batchBarcodes + '\n' + barcode
+                        : barcode
+                    }));
+                  }
+                }}
+              />
             </CardContent>
           </Card>
         </motion.div>
@@ -356,6 +394,16 @@ function AddItemForm() {
 }
 
 export default function AddItemPage() {
+  const { isAuthorized, isLoading } = useRouteGuard("inventory");
+
+  if (isLoading || !isAuthorized) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
       <AddItemForm />

@@ -13,6 +13,7 @@ import { PaymentModal } from "@/components/debts/PaymentModal";
 import { TransactionDetailsModal } from "@/components/debts/TransactionDetailsModal";
 import { DeferredSaleStatus } from "@/lib/services/debtService";
 import { cn } from "@/lib/utils";
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 
 // ─── Status config ────────────────────────────────────────────────────────────
 
@@ -25,6 +26,7 @@ const STATUS_CONFIG: Record<DeferredSaleStatus, { label: string; icon: React.Rea
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DebtsPage() {
+  const { isAuthorized, isLoading: isAuthLoading } = useRouteGuard('finance');
   const { summary, deferredSales, loading, loadingMore, hasMore, totalCount, refresh, loadMore } = useDebts();
   const [search, setSearch] = useState("");
 
@@ -40,6 +42,16 @@ export default function DebtsPage() {
     d.customers?.name?.toLowerCase().includes(search.toLowerCase()) ||
     d.id.includes(search)
   );
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
 
   return (
     <div className="min-h-screen pb-40 pt-10 px-4 max-w-2xl mx-auto space-y-8">

@@ -27,11 +27,11 @@ export default async function EmployeesPage() {
 
   const { data: profile } = await (supabase as any)
     .from("profiles")
-    .select("role")
+    .select("role, permissions")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "Manager") {
+  if (profile?.role !== "Manager" && !profile?.permissions?.staff) {
     redirect("/manage");
   }
 

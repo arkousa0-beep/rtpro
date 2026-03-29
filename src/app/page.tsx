@@ -107,22 +107,29 @@ export default function Home() {
       fetchStats();
     },
   });
+  const isAuthorized = (perm?: string) => {
+    if (!perm) return true;
+    if (loading || !profile) return false;
+    if (profile.role === "Manager") return true;
+    return profile.permissions?.[perm] === true;
+  };
+
   const cards = [
     { title: "مبيعات اليوم", value: `${stats.todaySales}`, unit: "ج.م", icon: TrendingUp, color: "text-primary", bg: "bg-primary/10", href: "/transactions", permission: "transactions" },
     { title: "المخزن", value: stats.totalItems, unit: "قطع", icon: Package, color: "text-amber-400", bg: "bg-amber-400/10", href: "/inventory", permission: "inventory" },
     { title: "قيمة المخزن (بيع)", value: stats.totalSelling.toLocaleString(), unit: "ج.م", icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-400/10", href: "/inventory", permission: "inventory" },
     { title: "النواقص", value: stats.lowStock, unit: "منتج", icon: AlertCircle, color: "text-red-400", bg: "bg-red-400/10", href: "/inventory", permission: "inventory" },
-  ].filter(card => !card.permission || (profile?.permissions?.[card.permission] ?? true));
+  ].filter(card => isAuthorized(card.permission));
 
   const quickActions = [
     { title: "نقطة البيع (POS)", desc: "فتح واجهة المبيعات السريعة", icon: ShoppingCart, color: "emerald", href: "/pos", permission: "pos" },
     { title: "إضافة للمخزن", desc: "تسجيل بضاعة جديدة في المتجر", icon: PlusCircle, color: "primary", href: "/inventory", permission: "inventory" },
-  ].filter(action => !action.permission || (profile?.permissions?.[action.permission] ?? true));
+  ].filter(action => isAuthorized(action.permission));
 
   const bottomActions = [
     { title: "سجل العمليات", icon: History, href: "/transactions", permission: "transactions" },
     { title: "إدارة العملاء", icon: Users, href: "/customers", permission: "customers" },
-  ].filter(action => !action.permission || (profile?.permissions?.[action.permission] ?? true));
+  ].filter(action => isAuthorized(action.permission));
 
   return (
     <div className="space-y-8 pb-10">

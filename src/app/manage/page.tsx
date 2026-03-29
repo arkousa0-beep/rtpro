@@ -16,8 +16,11 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ReturnDialog } from "@/components/ReturnDialog";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-const manageItems = [
+const allManageItems = [
   {
     title: "المخزن",
     desc: "الإضافات والجرد والحالة",
@@ -25,7 +28,8 @@ const manageItems = [
     href: "/inventory",
     color: "from-primary/20 to-primary/5",
     iconColor: "text-primary",
-    borderColor: "group-hover:border-primary/50"
+    borderColor: "group-hover:border-primary/50",
+    permission: "inventory"
   },
   {
     title: "المنتجات",
@@ -34,7 +38,8 @@ const manageItems = [
     href: "/products",
     color: "from-indigo-500/20 to-indigo-600/5",
     iconColor: "text-indigo-500",
-    borderColor: "group-hover:border-indigo-500/50"
+    borderColor: "group-hover:border-indigo-500/50",
+    permission: "inventory"
   },
   {
     title: "الأصناف",
@@ -43,7 +48,8 @@ const manageItems = [
     href: "/categories",
     color: "from-emerald-500/20 to-emerald-600/5",
     iconColor: "text-emerald-500",
-    borderColor: "group-hover:border-emerald-500/50"
+    borderColor: "group-hover:border-emerald-500/50",
+    permission: "inventory"
   },
   {
     title: "العملاء",
@@ -52,7 +58,8 @@ const manageItems = [
     href: "/customers",
     color: "from-blue-500/20 to-blue-600/5",
     iconColor: "text-blue-500",
-    borderColor: "group-hover:border-blue-500/50"
+    borderColor: "group-hover:border-blue-500/50",
+    permission: "customers"
   },
   {
     title: "الموردين",
@@ -61,7 +68,8 @@ const manageItems = [
     href: "/suppliers",
     color: "from-amber-500/20 to-amber-600/5",
     iconColor: "text-amber-500",
-    borderColor: "group-hover:border-amber-500/50"
+    borderColor: "group-hover:border-amber-500/50",
+    permission: "suppliers"
   },
   {
     title: "سجل المعاملات",
@@ -70,7 +78,8 @@ const manageItems = [
     href: "/transactions",
     color: "from-cyan-500/20 to-cyan-600/5",
     iconColor: "text-cyan-500",
-    borderColor: "group-hover:border-cyan-500/50"
+    borderColor: "group-hover:border-cyan-500/50",
+    permission: "transactions"
   },
   {
     title: "إدارة الديون",
@@ -79,7 +88,8 @@ const manageItems = [
     href: "/debts",
     color: "from-red-500/20 to-red-600/5",
     iconColor: "text-red-400",
-    borderColor: "group-hover:border-red-500/50"
+    borderColor: "group-hover:border-red-500/50",
+    permission: "finance"
   },
   {
     title: "الموظفين",
@@ -88,11 +98,56 @@ const manageItems = [
     href: "/manage/employees",
     color: "from-rose-500/20 to-rose-600/5",
     iconColor: "text-rose-500",
-    borderColor: "group-hover:border-rose-500/50"
+    borderColor: "group-hover:border-rose-500/50",
+    permission: "staff"
   },
 ];
 
 export default function ManagePage() {
+  const [manageItems, setManageItems] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    async function fetchData() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      setProfile(profileData);
+
+      if (profileData?.role === "Manager") {
+        setManageItems(allManageItems);
+      } else {
+        const filtered = allManageItems.filter(item => profileData?.permissions?.[item.permission]);
+        setManageItems(filtered);
+        
+        if (filtered.length === 0) {
+          router.push("/");
+        }
+      }
+      setLoading(false);
+    }
+    fetchData();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-40 pt-10 px-6 space-y-12 max-w-2xl mx-auto">
       {/* Header */}

@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Tag } from "lucide-react";
+import { Tag, Loader2 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 import { CategoryList } from "@/components/management/CategoryList";
 import { ManagePageLayout } from "@/components/management/ManagePageLayout";
 import { CategoryModal } from "@/components/management/CategoryModal";
@@ -21,11 +22,21 @@ export default function CategoriesPage() {
     setPendingDeleteId 
   } = useCategories();
   
+  const { isAuthorized, isLoading: guardLoading } = useRouteGuard("inventory");
+  
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [viewingCategory, setViewingCategory] = useState<Category | null>(null);
   const [sortBy, setSortBy] = useState("name");
+
+  if (guardLoading || !isAuthorized) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
 
   const filtered = categories
     .filter(c => 

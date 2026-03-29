@@ -13,7 +13,7 @@ interface NavLink {
   name: string;
   href: string;
   icon: React.ElementType;
-  permission?: keyof ProfilePermissions;
+  permission?: keyof ProfilePermissions | (keyof ProfilePermissions)[];
 }
 
 const ALL_LINKS: NavLink[] = [
@@ -21,7 +21,7 @@ const ALL_LINKS: NavLink[] = [
   { name: "المبيعات",  href: "/pos",      icon: Scan,      permission: "pos" },
   { name: "المالية",   href: "/finance",  icon: TrendingUp, permission: "finance" },
   { name: "المخزن",   href: "/inventory", icon: Package,   permission: "inventory" },
-  { name: "الإدارة",  href: "/manage",    icon: Settings,  permission: "staff" },
+  { name: "الإدارة",  href: "/manage",    icon: Settings,  permission: ["staff", "customers", "suppliers", "transactions"] },
 ];
 
 export function BottomNav() {
@@ -48,7 +48,13 @@ export function BottomNav() {
       setLinks(
         ALL_LINKS.filter((link) => {
           if (!link.permission) return true; // always visible (Home)
-          return isManager || perms?.[link.permission] === true;
+          if (isManager) return true;
+          
+          if (Array.isArray(link.permission)) {
+            return link.permission.some((p) => perms?.[p] === true);
+          }
+          
+          return perms?.[link.permission] === true;
         })
       );
     }

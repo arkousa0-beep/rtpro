@@ -16,8 +16,10 @@ import { ManagePageLayout } from "@/components/management/ManagePageLayout";
 import { useCustomers } from "@/hooks/useCustomers";
 import { cn } from "@/lib/utils";
 import { exportToExcel } from "@/lib/services/exportService";
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 
 export default function CustomersPage() {
+  const { isAuthorized, isLoading: isAuthLoading } = useRouteGuard('customers');
   const { customers, loading, submitting, addCustomer } = useCustomers();
   const [search, setSearch] = useState("");
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", address: "" });
@@ -47,6 +49,16 @@ export default function CustomersPage() {
       if (sortBy === 'newest') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       return 0;
     });
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
 
   return (
     <ManagePageLayout

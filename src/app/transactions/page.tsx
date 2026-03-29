@@ -12,8 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { TransactionDetailsDrawer } from "@/components/management/TransactionDetailsDrawer";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { exportToPDF, exportToExcel } from "@/lib/services/exportService";
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 
 export default function TransactionsPage() {
+  const { isAuthorized, isLoading: isAuthLoading } = useRouteGuard('transactions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -127,6 +129,16 @@ export default function TransactionsPage() {
     setSelectedTransactionId(id);
     setDrawerOpen(true);
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
 
   return (
     <ManagePageLayout

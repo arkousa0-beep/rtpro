@@ -98,6 +98,7 @@ export function PermissionManager({ userId, initialPermissions, userName }: Perm
                 id={key}
                 checked={permissions[key]} 
                 onCheckedChange={() => handleToggle(key)}
+                onClick={(e) => e.stopPropagation()}
                 className="data-[state=checked]:bg-primary"
               />
             </div>

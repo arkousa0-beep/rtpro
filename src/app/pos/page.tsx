@@ -12,12 +12,16 @@ import { POSControlCockpit } from '@/components/pos/POSControlCockpit';
 import { ParkedCartsDialog } from '@/components/pos/ParkedCartsDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from 'sonner';
+import { playSuccessSound } from '@/lib/audioUtils';
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 
 /**
  * POS Page - Mobile Optimized
  * Performance focused with modular components and store-driven state.
  */
 export default function POSPage() {
+  const { isAuthorized, isLoading: guardLoading } = useRouteGuard("pos");
+
   const { 
     cart, 
     total, 
@@ -95,7 +99,14 @@ export default function POSPage() {
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  if (!mounted) {
+  const handleCameraScan = async (barcode: string) => {
+    const res = await addItem(barcode);
+    if (!res.success) {
+      toast.error(res.message);
+    }
+  };
+
+  if (!mounted || guardLoading || !isAuthorized) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-5rem)]">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
@@ -190,6 +201,7 @@ export default function POSPage() {
         onCustomerIdChange={setCustomerId}
         inputRef={inputRef}
         customers={customers}
+        onScanBarcode={handleCameraScan}
       />
 
       <ConfirmDialog

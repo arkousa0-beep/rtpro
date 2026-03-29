@@ -42,6 +42,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 
 interface Stats {
   revenue: number;
@@ -54,6 +55,7 @@ interface Stats {
 }
 
 export default function FinancePage() {
+  const { isAuthorized, isLoading: isAuthLoading } = useRouteGuard('finance');
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState("today");
@@ -162,13 +164,15 @@ export default function FinancePage() {
     exportToPDF('التقرير المالي', columns, rows, { subtitle: `الفترة: ${period}` });
   };
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />
       </div>
     );
   }
+
+  if (!isAuthorized) return null;
 
   return (
     <div className="min-h-screen pb-32 pt-4 px-1 space-y-8">

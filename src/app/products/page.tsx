@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Box } from "lucide-react";
+import { Box, Loader2 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 import { ProductList } from "@/components/management/ProductList";
 import { ManagePageLayout } from "@/components/management/ManagePageLayout";
 import { ProductModal } from "@/components/management/ProductModal";
@@ -24,6 +25,8 @@ export default function ProductsPage() {
     setPendingDeleteId,
   } = useProducts();
   const { categories, loading: categoriesLoading } = useCategories();
+  
+  const { isAuthorized, isLoading: guardLoading } = useRouteGuard("inventory");
 
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -32,6 +35,14 @@ export default function ProductsPage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const loading = productsLoading || categoriesLoading;
+
+  if (guardLoading || !isAuthorized) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
 
   const filtered = products.filter(p => {
     const matchesSearch =

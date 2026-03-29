@@ -13,8 +13,10 @@ import { ManagePageLayout } from "@/components/management/ManagePageLayout";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 
 export default function SuppliersPage() {
+  const { isAuthorized, isLoading: isAuthLoading } = useRouteGuard('suppliers');
   const { suppliers, loading, submitting, addSupplier, updateSupplier, requestDeleteSupplier, confirmDeleteSupplier, pendingDeleteId, setPendingDeleteId } = useSuppliers();
   const [search, setSearch] = useState("");
   const [formData, setFormData] = useState({ name: "", phone: "" });
@@ -67,6 +69,16 @@ export default function SuppliersPage() {
       if (sortBy === 'newest') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       return 0;
     });
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-amber-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
 
   return (
     <ManagePageLayout
