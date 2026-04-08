@@ -27,6 +27,8 @@ interface POSState {
   selectedCustomerId: string | null;
   paymentMethod: string;
   paidAmount: number;
+  discountType: 'amount' | 'percentage';
+  discountValue: number;
   parkedCarts: ParkedCart[];
 
   addItem: (barcode: string) => Promise<{ success: boolean; message?: string }>;
@@ -34,6 +36,7 @@ interface POSState {
   setCustomerId: (id: string | null) => void;
   setPaymentMethod: (method: string) => void;
   setPaidAmount: (amount: number) => void;
+  setDiscount: (type: 'amount' | 'percentage', value: number) => void;
   checkout: () => Promise<{ success: boolean; message?: string }>;
   clearCart: () => void;
 
@@ -53,6 +56,8 @@ export const usePOSStore = create<POSState>()(
       selectedCustomerId: 'walkin',
       paymentMethod: 'Cash',
       paidAmount: 0,
+      discountType: 'amount',
+      discountValue: 0,
       parkedCarts: [],
 
       addItem: async (barcode: string) => {
@@ -109,9 +114,10 @@ export const usePOSStore = create<POSState>()(
         });
       },
       setPaidAmount: (amount: number) => set({ paidAmount: amount }),
+      setDiscount: (type, value) => set({ discountType: type, discountValue: value }),
 
       checkout: async () => {
-        const { cart, total, selectedCustomerId, paymentMethod, paidAmount } = get();
+        const { cart, total, selectedCustomerId, paymentMethod, paidAmount, discountType, discountValue } = get();
         if (cart.length === 0) return { success: false, message: 'السلة فارغة' };
 
         if (paymentMethod === 'Credit' && (selectedCustomerId === 'walkin' || !selectedCustomerId)) {
@@ -122,15 +128,21 @@ export const usePOSStore = create<POSState>()(
         set({ loading: true });
 
         try {
+          let dAmount = 0, dPercentage = 0;
+          if(discountType === 'amount') dAmount = discountValue;
+          if(discountType === 'percentage') dPercentage = discountValue;
+
           await POSService.processSale(
             cart,
             total,
             paymentMethod === 'Credit' ? 'Debt' : paymentMethod,
             selectedCustomerId,
-            paidAmount
+            paidAmount,
+            dAmount,
+            dPercentage
           );
 
-          set({ cart: [], total: 0, loading: false, error: null });
+          set({ cart: [], total: 0, discountType: 'amount', discountValue: 0, loading: false, error: null });
           return { success: true };
         } catch (err: any) {
           set({ loading: false, error: err.message });

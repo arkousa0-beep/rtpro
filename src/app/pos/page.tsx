@@ -29,6 +29,8 @@ export default function POSPage() {
     error, 
     selectedCustomerId,
     paymentMethod,
+    discountType,
+    discountValue,
     addItem, 
     removeItem, 
     checkout,
@@ -38,7 +40,8 @@ export default function POSPage() {
     parkedCarts,
     clearCart,
     paidAmount,
-    setPaidAmount
+    setPaidAmount,
+    setDiscount
   } = usePOSStore();
   
   const { customers } = useCustomers();
@@ -203,6 +206,9 @@ export default function POSPage() {
           inputRef={inputRef}
           customers={customers}
           onScanBarcode={handleCameraScan}
+          discountType={discountType}
+          discountValue={discountValue}
+          onDiscountChange={setDiscount}
         />
       </div>
 

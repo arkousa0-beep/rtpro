@@ -13,6 +13,8 @@ import { Item } from "@/lib/database.types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { useCustomers } from "@/hooks/useCustomers";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 
 export function ReturnDialog() {
   const [open, setOpen] = useState(false);
@@ -22,6 +24,8 @@ export function ReturnDialog() {
   const [reason, setReason] = useState("");
   const [refundMethod, setRefundMethod] = useState<"Cash" | "Balance">("Cash");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const { customers } = useCustomers();
 
   const handleSearch = async () => {
     if (!barcode.trim()) return;
@@ -58,41 +62,28 @@ export function ReturnDialog() {
     if (itemsToReturn.length === 0) return;
     setIsProcessing(true);
 
-    const successfulBarcodes: string[] = [];
-    const failedBarcodes: string[] = [];
-
     try {
-      // Process returns sequentially to handle individual DB errors correctly
-      for (const item of itemsToReturn) {
-        const { data, error } = await supabase.rpc('process_return', {
-          p_barcode: item.barcode,
-          p_reason: reason || 'مرتجع عميل',
-          p_refund_method: refundMethod
-        });
+      const barcodes = itemsToReturn.map(i => i.barcode);
+      const { data, error } = await supabase.rpc('process_batch_return', {
+        p_barcodes: barcodes,
+        p_reason: reason || 'مرتجع عميل',
+        p_refund_method: refundMethod,
+        p_customer_id: selectedCustomerId && selectedCustomerId !== 'walkin' ? selectedCustomerId : undefined
+      });
 
-        if (!error && data?.success !== false) {
-          successfulBarcodes.push(item.barcode);
-        } else {
-          failedBarcodes.push(item.barcode);
-        }
+      if (error) {
+        throw new Error(error.message);
       }
 
-      // إزالة القطع الناجحة فقط - تبقى الفاشلة في القائمة
-      if (successfulBarcodes.length > 0) {
-        setItemsToReturn(prev => prev.filter(i => !successfulBarcodes.includes(i.barcode)));
+      if ((data as any)?.success === false) {
+        throw new Error((data as any)?.message || 'فشل إرجاع القطع');
       }
 
-      if (failedBarcodes.length === 0) {
-        toast.success(`تم إرجاع عدد ${successfulBarcodes.length} قطع للمخزن بنجاح`);
-        setOpen(false);
-        reset();
-      } else if (successfulBarcodes.length > 0) {
-        toast.warning(`تم إرجاع ${successfulBarcodes.length} قطعة. فشل ${failedBarcodes.length} قطعة - تحقق منها.`);
-      } else {
-        toast.error('فشل إرجاع جميع القطع. حاول مجدداً.');
-      }
+      toast.success(`تم بنجاح إرجاع ${itemsToReturn.length} قطع وتحديث المعاملات`);
+      setOpen(false);
+      reset();
     } catch (err: any) {
-      toast.error(err.message || 'حدث خطأ أثناء الإرجاع');
+      toast.error(err.message || 'حدث خطأ أثناء الإرجاع الجماعي');
     } finally {
       setIsProcessing(false);
     }
@@ -207,14 +198,37 @@ export function ReturnDialog() {
           </div>
 
            <div className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">طريقة الاسترجاع</span>
-            </div>
-            <Tabs 
-              value={refundMethod} 
-              onValueChange={(v) => setRefundMethod(v as any)} 
-              className="w-full"
-            >
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 space-y-2">
+                <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] px-2 block text-right">العميل (اختياري)</span>
+                <Select 
+                  onValueChange={setSelectedCustomerId} 
+                  value={selectedCustomerId || 'walkin'}
+                >
+                  <SelectTrigger className="h-14 bg-white/5 rounded-2xl border-white/5 text-right px-4 text-white font-bold focus:ring-0 text-sm">
+                    {selectedCustomerId && selectedCustomerId !== 'walkin' ? (
+                      <span className="truncate flex-1 text-right block">{customers.find(c => c.id === selectedCustomerId)?.name || "عميل عام كاشير"}</span>
+                    ) : (
+                      <span className="truncate flex-1 text-right block text-white/50">عميل عام كاشير (Walk-in)</span>
+                    )}
+                  </SelectTrigger>
+                  <SelectContent className="glass border-white/5 rounded-2xl bg-black/90 max-h-[200px]">
+                    <SelectItem value="walkin" className="text-right font-bold py-3 text-white/50">عميل عام كاشير (Walk-in)</SelectItem>
+                    {customers.map(c => (
+                      <SelectItem key={c.id} value={c.id} className="text-right font-bold py-3 text-white">
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1 space-y-2">
+                <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] px-2 block text-right">طريقة الاسترجاع</span>
+                <Tabs 
+                  value={refundMethod} 
+                  onValueChange={(v) => setRefundMethod(v as any)} 
+                  className="w-full"
+                >
               <TabsList className="w-full h-14 bg-white/5 border border-white/5 rounded-2xl grid grid-cols-2 p-1">
                 <TabsTrigger 
                   value="Cash" 

@@ -57,7 +57,7 @@ export default function TransactionsPage() {
   };
 
   const handleExportExcel = () => {
-    const columns = ['النوع', 'العميل', 'المبلغ', 'طريقة الدفع', 'التاريخ', 'رقم المعاملة'];
+    const columns = ['النوع', 'العميل', 'المبلغ', 'طريقة الدفع', 'التاريخ', 'رقم الفاتورة'];
     const rows = filtered.map(t => {
       const type = t.type as string;
       return [
@@ -66,7 +66,7 @@ export default function TransactionsPage() {
         Number(t.total),
         t.method === 'Cash' ? 'كاش' : t.method === 'Card' ? 'فيزا' : t.method === 'Debt' ? 'آجل' : t.method,
         new Date(t.created_at).toLocaleDateString('ar-EG'),
-        t.id,
+        (t as any).invoice_number || t.id.split('-')[0],
       ];
     });
     exportToExcel('تقرير المعاملات', columns, rows);
@@ -190,8 +190,13 @@ export default function TransactionsPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-black text-white text-lg">{getTransactionLabel(t.type)}</h4>
                           <Badge variant="outline" className="bg-white/5 border-none text-white/40 text-[10px] font-mono">
-                            {t.id.split('-')[0]}
+                            #{(t as any).invoice_number || t.id.split('-')[0]}
                           </Badge>
+                          {((t as any).discount_amount > 0 || (t as any).discount_percentage > 0) && (
+                            <Badge className="bg-amber-500/10 text-amber-500 text-[10px] ml-2 font-bold border border-amber-500/20">
+                              خصم {(t as any).discount_amount > 0 ? `${(t as any).discount_amount} ج.م` : `${(t as any).discount_percentage}%`}
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex flex-col text-sm text-white/40 gap-1">
                           <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(t.created_at).toLocaleString('ar-EG')}</span>

@@ -29,6 +29,9 @@ interface POSControlCockpitProps {
   inputRef: React.RefObject<HTMLInputElement | null>;
   customers: Customer[];
   onScanBarcode: (barcode: string) => void;
+  discountType: 'amount' | 'percentage';
+  discountValue: number;
+  onDiscountChange: (type: 'amount' | 'percentage', value: number) => void;
 }
 
 /**
@@ -48,9 +51,15 @@ export const POSControlCockpit = ({
   onPaidAmountChange,
   inputRef,
   customers,
-  onScanBarcode
+  onScanBarcode,
+  discountType,
+  discountValue,
+  onDiscountChange
 }: POSControlCockpitProps) => {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  
+  const computedDiscount = discountType === 'amount' ? discountValue : (total * (discountValue / 100));
+  const finalTotal = Math.max(0, total - computedDiscount);
   
   return (
     <div className="w-full mt-auto pt-4 z-50 md:z-10 fixed bottom-0 left-0 right-0 md:static pb-20 md:pb-0 bg-gradient-to-t from-black via-black to-transparent md:from-transparent md:bg-none pointer-events-none md:pointer-events-auto">
@@ -167,6 +176,35 @@ export const POSControlCockpit = ({
                 ))}
               </div>
             </div>
+
+            {/* Discount Section */}
+            <div className="flex gap-2">
+              <div className="flex-1 relative flex items-center bg-white/5 rounded-2xl p-1 overflow-hidden shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onDiscountChange('amount', discountValue)}
+                  className={`flex-1 h-10 rounded-xl text-xs font-bold transition-all ${discountType === 'amount' ? 'bg-amber-500 text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                >
+                  مبلغ (ج.م)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDiscountChange('percentage', discountValue)}
+                  className={`flex-1 h-10 rounded-xl text-xs font-bold transition-all ${discountType === 'percentage' ? 'bg-amber-500 text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                >
+                  نسبة (%)
+                </button>
+              </div>
+              <div className="flex-1 relative">
+                <Input
+                  type="number"
+                  value={discountValue || ''}
+                  onChange={(e) => onDiscountChange(discountType, Number(e.target.value))}
+                  placeholder="قيمة الخصم..."
+                  className="h-12 bg-white/5 rounded-2xl border-white/5 text-right px-4 text-amber-500 font-black focus:ring-1 focus:ring-amber-500/30 transition-all text-sm"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Checkout Button - PRIMARY THUMB ACTION */}
@@ -180,13 +218,17 @@ export const POSControlCockpit = ({
             
             <div className="flex items-center justify-between w-full px-6 relative z-10">
               <div className="bg-black/10 px-4 py-1.5 rounded-2xl backdrop-blur-md border border-black/5 md:hidden">
-                 <span className="text-black/40 text-[10px] font-black uppercase tracking-widest block text-right">الإجمالي</span>
+                 <span className="text-black/40 text-[10px] font-black uppercase tracking-widest block text-right">الإجمالي النهائي</span>
                  <span className="text-2xl font-black text-black leading-none flex items-baseline gap-1">
-                   {total} <small className="text-xs">ج.م</small>
+                   {finalTotal} <small className="text-xs">ج.م</small>
                  </span>
               </div>
               
               <div className="flex items-center justify-center w-full md:justify-between gap-3">
+                <div className="hidden md:flex flex-col text-right">
+                  <span className="text-xs font-bold text-black/50">بعد الخصم</span>
+                  <span className="text-2xl font-black text-black leading-none">{finalTotal} ج.م</span>
+                </div>
                 <span className="text-xl md:text-2xl font-black text-black">إتمام الدفع الآن</span>
                 <div className="w-12 h-12 md:w-14 md:h-14 bg-black rounded-xl flex items-center justify-center text-primary group-hover:rotate-[-10deg] transition-transform shadow-2xl">
                   {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <ArrowRight className="w-6 h-6 md:w-7 md:h-7" />}

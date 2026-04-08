@@ -13,6 +13,9 @@ export interface TransactionDetails {
   customer_id: string | null;
   supplier_id: string | null;
   created_at: string;
+  invoice_number?: number;
+  discount_amount?: number;
+  discount_percentage?: number;
   customers?: {
     name: string;
     phone: string | null;
@@ -60,12 +63,19 @@ export const transactionService = {
 
     if (txItemsError) {
       console.error('Error fetching transaction_items:', txItemsError);
-      return transaction as unknown as TransactionDetails;
+      return {
+        ...(transaction as Omit<TransactionDetails, 'items'>),
+        items: []
+      } as TransactionDetails;
     }
 
     return {
-      ...transaction,
-      items: (txItems ?? []) as unknown as TransactionDetails['items'],
-    } as unknown as TransactionDetails;
+      ...(transaction as Omit<TransactionDetails, 'items'>),
+      items: txItems.map(item => ({
+        barcode: item.barcode,
+        price: item.price,
+        products: Array.isArray(item.products) ? item.products[0] : item.products
+      }))
+    } as TransactionDetails;
   }
 };

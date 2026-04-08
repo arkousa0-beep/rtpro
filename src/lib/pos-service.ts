@@ -24,7 +24,7 @@ export const POSService = {
     return data;
   },
 
-  async processSale(cart: { barcode: string }[], total: number, paymentMethod: string, customerId: string | null, paidAmount?: number) {
+  async processSale(cart: { barcode: string }[], total: number, paymentMethod: string, customerId: string | null, paidAmount?: number, discountAmount?: number, discountPercentage?: number) {
     const invalidBarcodes = validateBarcodes(cart.map(item => item.barcode));
 
     if (invalidBarcodes.length > 0) {
@@ -40,7 +40,9 @@ export const POSService = {
       p_total_amount: total,
       p_payment_method: paymentMethod,
       p_customer_id: customerId === 'walkin' ? null : customerId,
-      p_paid_amount: paidAmount || total
+      p_paid_amount: paidAmount || total,
+      p_discount_amount: discountAmount || 0,
+      p_discount_percentage: discountPercentage || 0
     });
 
     if (error) throw error;

@@ -102,6 +102,9 @@ export interface Transaction {
   customer_id: string | null
   supplier_id: string | null
   created_at: string
+  invoice_number: number
+  discount_amount: number
+  discount_percentage: number
   transaction_items?: TransactionItem[]
   customers?: Customer
   suppliers?: Supplier
@@ -220,10 +223,13 @@ export type Database = {
       }
       transactions: {
         Row: Transaction
-        Insert: Omit<Transaction, 'id' | 'created_at' | 'paid_amount' | 'transaction_items' | 'customers' | 'suppliers'> & {
+        Insert: Omit<Transaction, 'id' | 'created_at' | 'paid_amount' | 'transaction_items' | 'customers' | 'suppliers' | 'invoice_number' | 'discount_amount' | 'discount_percentage'> & {
           id?: string
           created_at?: string
           paid_amount?: number
+          invoice_number?: number
+          discount_amount?: number
+          discount_percentage?: number
         }
         Update: Partial<Omit<Transaction, 'transaction_items' | 'customers' | 'suppliers'>>
       }
@@ -293,8 +299,10 @@ export type Database = {
           p_items_list: string[]
           p_total_amount: number
           p_payment_method: string
-          p_customer_id: string | null
-          p_paid_amount: number
+          p_customer_id?: string | null
+          p_paid_amount?: number | null
+          p_discount_amount?: number
+          p_discount_percentage?: number
         }
         Returns: { success: boolean; message?: string; transaction_id?: string }
       }
@@ -310,6 +318,16 @@ export type Database = {
         Args: {
           p_customer_id: string
           p_amount: number
+          p_sale_id?: string | null
+        }
+        Returns: { success: boolean; message?: string; transaction_id?: string; new_balance?: number }
+      }
+      process_batch_return: {
+        Args: {
+          p_barcodes: string[]
+          p_reason: string
+          p_refund_method?: string
+          p_customer_id?: string | null
         }
         Returns: { success: boolean; message?: string; transaction_id?: string }
       }
