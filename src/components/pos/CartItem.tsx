@@ -59,9 +59,6 @@ export const CartItem = React.memo(({ item, onRemove }: CartItemProps) => {
                  <span className="text-[10px] font-black font-mono text-white/10 tracking-widest uppercase">
                    {item.barcode}
                  </span>
-                 <Badge className="bg-white/5 text-[9px] h-5 rounded-full font-bold text-white/40 border-none px-2">
-                   في المخزن
-                 </Badge>
               </div>
             </div>
           </div>

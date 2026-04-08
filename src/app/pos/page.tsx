@@ -87,6 +87,7 @@ export default function POSPage() {
     try {
       const res = await checkout();
       if (res.success) {
+        playSuccessSound();
         toast.success("تم إتمام عملية البيع بنجاح");
       } else {
         toast.error(res.message || "فشلت عملية البيع");

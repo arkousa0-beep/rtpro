@@ -492,30 +492,30 @@ flowchart TB
 
 | # | المشكلة | التفاصيل | الملف |
 |---|---------|----------|-------|
-| C1 | **المرتجع غير مربوط بالعميل** | `ReturnDialog` لا يطلب تحديد العميل. لا يتم التحقق من أن الشخص الذي يطلب الإرجاع هو من اشترى القطعة. إذا كان `refundMethod = 'Balance'` فلا يمكن معرفة أي عميل يُضاف له الرصيد إلا عبر الـ RPC الذي ربما يستخدم `customer_id` المحفوظ في الـ item. | [ReturnDialog.tsx](file:///d:/rtpro/src/components/ReturnDialog.tsx) |
-| C2 | **ReturnDialog غير مدمج في الـ routing** | الـ `ReturnDialog` هو component مستقل ولكنه غير ظاهر في أي صفحة route واضحة. يبدو أنه يُستدعى من مكان ما في الإدارة لكن لا يوجد له route مخصص ولا طريق واضح للوصول إليه. | [ReturnDialog.tsx](file:///d:/rtpro/src/components/ReturnDialog.tsx) |
+| ✅ C1 | **المرتجع غير مربوط بالعميل** | `ReturnDialog` لا يطلب تحديد العميل. لا يتم التحقق من أن الشخص الذي يطلب الإرجاع هو من اشترى القطعة. إذا كان `refundMethod = 'Balance'` فلا يمكن معرفة أي عميل يُضاف له الرصيد إلا عبر الـ RPC الذي ربما يستخدم `customer_id` المحفوظ في الـ item. | [ReturnDialog.tsx](file:///d:/rtpro/src/components/ReturnDialog.tsx) |
+| ✅ C2 | **ReturnDialog غير مدمج في الـ routing** | الـ `ReturnDialog` هو component مستقل ولكنه غير ظاهر في أي صفحة route واضحة. يبدو أنه يُستدعى من مكان ما في الإدارة لكن لا يوجد له route مخصص ولا طريق واضح للوصول إليه. | [ReturnDialog.tsx](file:///d:/rtpro/src/components/ReturnDialog.tsx) |
 | C3 | **لا يوجد Quantity tracking** | كل item هو صف مستقل بباركود فريد. لا يمكن بيع "3 قطع من نفس المنتج" — بل يجب مسح 3 باركودات مختلفة. هذا تصميم مقصود لكنه قد يكون محدوداً لبعض أنواع البضائع. | التصميم العام |
 
 ### 🟡 مشاكل متوسطة (Medium)
 
 | # | المشكلة | التفاصيل | الملف |
 |---|---------|----------|-------|
-| M1 | **عدم وجود نظام خصومات** | لا يوجد آلية لتطبيق خصم على الفاتورة أو على منتج معين | POS System |
-| M2 | **لا يوجد رقم فاتورة متسلسل** | يتم استخدام UUID كمعرف للمعاملة مما يجعل التتبع البشري صعباً. يُعرض فقط أول 8 حروف من الـ UUID. | [TransactionDetailsDrawer.tsx](file:///d:/rtpro/src/components/management/TransactionDetailsDrawer.tsx) |
-| M3 | **الاسترداد يعالج القطع تسلسلياً** | في `handleReturnAll`، كل قطعة تُعالج بـ RPC منفصل بشكل `sequential`، مما قد يكون بطيئاً. الأفضل إنشاء RPC يقبل قائمة باركودات. | [ReturnDialog.tsx:66](file:///d:/rtpro/src/components/ReturnDialog.tsx#L66) |
-| M4 | **PaymentModal لا يدعم الدفع الجزئي للفاتورة الواحدة** | `processPayment` يخصم من الرصيد الكلي للعميل وليس من فاتورة محددة. لا يمكن ربط الدفعة بفاتورة آجلة بعينها. | [PaymentModal.tsx](file:///d:/rtpro/src/components/debts/PaymentModal.tsx) |
-| M5 | **`type: any` casting كثير** | في عدة أماكن يتم استخدام `(t as any).customers?.name` بدلاً من TypeScript generics مناسبة | ملفات متعددة |
+| ✅ M1 | **عدم وجود نظام خصومات** | لا يوجد آلية لتطبيق خصم على الفاتورة أو على منتج معين | POS System |
+| ✅ M2 | **لا يوجد رقم فاتورة متسلسل** | يتم استخدام UUID كمعرف للمعاملة مما يجعل التتبع البشري صعباً. يُعرض فقط أول 8 حروف من الـ UUID. | [TransactionDetailsDrawer.tsx](file:///d:/rtpro/src/components/management/TransactionDetailsDrawer.tsx) |
+| ✅ M3 | **الاسترداد يعالج القطع تسلسلياً** | في `handleReturnAll`، كل قطعة تُعالج بـ RPC منفصل بشكل `sequential`، مما قد يكون بطيئاً. الأفضل إنشاء RPC يقبل قائمة باركودات. | [ReturnDialog.tsx:66](file:///d:/rtpro/src/components/ReturnDialog.tsx#L66) |
+| ✅ M4 | **PaymentModal لا يدعم الدفع الجزئي للفاتورة الواحدة** | `processPayment` يخصم من الرصيد الكلي للعميل وليس من فاتورة محددة. لا يمكن ربط الدفعة بفاتورة آجلة بعينها. | [PaymentModal.tsx](file:///d:/rtpro/src/components/debts/PaymentModal.tsx) |
+| ✅ M5 | **`type: any` casting كثير** | في عدة أماكن يتم استخدام `(t as any).customers?.name` بدلاً من TypeScript generics مناسبة | ملفات متعددة |
 | M6 | **عدم وجود حد أقصى لتعليق السلال** | يمكن تعليق عدد غير محدود من السلال، وكلها تُخزن في localStorage | [usePOSStore.ts](file:///d:/rtpro/src/store/usePOSStore.ts) |
 
 ### 🟢 ملاحظات تحسينية (Low)
 
 | # | الملاحظة | التفاصيل |
 |---|---------|----------|
-| L1 | **playSuccessSound مستورد ولا يُستخدم** | `import { playSuccessSound }` في POS page لكنه غير مُستدعى عند نجاح البيع | 
-| L2 | **CartItem يعرض "في المخزن" دائماً** | Badge "في المخزن" يظهر لكل عنصر في السلة وهو redundant لأن كل شيء في السلة بالتعريف كان In-Stock |
+| ✅ L1 | **playSuccessSound مستورد ولا يُستخدم** | `import { playSuccessSound }` في POS page لكنه غير مُستدعى عند نجاح البيع | 
+| ✅ L2 | **CartItem يعرض "في المخزن" دائماً** | Badge "في المخزن" يظهر لكل عنصر في السلة وهو redundant لأن كل شيء في السلة بالتعريف كان In-Stock |
 | L3 | **لا توجد طباعة فعلية** | زر "طباعة الإيصال" يستدعي `window.print()` وهو غير محسّن للإيصالات الحرارية |
 | L4 | **حذف العميل ConfirmDialog رسالة مضللة** | الرسالة تقول "سيتم حذف أو فقدان ارتباطات" لكن الحذف هو Soft Delete ولا تُفقد البيانات |
-| L5 | **غياب validation للهاتف/العنوان في إضافة العميل** | يمكن إدخال أي نص كرقم هاتف بدون تحقق من الصيغة |
+| ✅ L5 | **غياب validation للهاتف/العنوان في إضافة العميل** | يمكن إدخال أي نص كرقم هاتف بدون تحقق من الصيغة |
 
 ---
 
@@ -523,23 +523,23 @@ flowchart TB
 
 ### 🔴 أولوية عالية
 
-1. **ربط المرتجع بالعميل**: تعديل `ReturnDialog` ليطلب تحديد العميل (أو جلبه تلقائياً من القطعة المباعة) + تمرير `customer_id` للـ RPC
-2. **دمج ReturnDialog في route واضح**: إضافته كزر أو tab في `/pos` أو إنشاء `/returns` route مخصص
-3. **استبدال UUID بـ رقم فاتورة متسلسل**: إضافة عمود `invoice_number SERIAL` في جدول `transactions`
+1. ✅ **ربط المرتجع بالعميل**: تعديل `ReturnDialog` ليطلب تحديد العميل (أو جلبه تلقائياً من القطعة المباعة) + تمرير `customer_id` للـ RPC
+2. ✅ **دمج ReturnDialog في route واضح**: إضافته كزر أو tab في `/pos` أو إنشاء `/returns` route مخصص
+3. ✅ **استبدال UUID بـ رقم فاتورة متسلسل**: إضافة عمود `invoice_number SERIAL` في جدول `transactions`
 
 ### 🟡 أولوية متوسطة
 
-4. **إنشاء RPC batch return**: بدلاً من معالجة كل قطعة منفردة، إنشاء `process_batch_return(p_barcodes[], p_reason, p_refund_method, p_customer_id)`
-5. **نظام خصومات**: إضافة `discount_amount` و `discount_percentage` في جدول `transactions`
-6. **ربط الدفعة بالفاتورة**: تعديل `pay_customer_debt` ليقبل `transaction_id` اختياري لربط السداد بفاتورة محددة
-7. **إزالة `type: any` casting**: تحسين TypeScript types في جميع الملفات
+4. ✅ **إنشاء RPC batch return**: بدلاً من معالجة كل قطعة منفردة، إنشاء `process_batch_return(p_barcodes[], p_reason, p_refund_method, p_customer_id)`
+5. ✅ **نظام خصومات**: إضافة `discount_amount` و `discount_percentage` في جدول `transactions`
+6. ✅ **ربط الدفعة بالفاتورة**: تعديل `pay_customer_debt` ليقبل `transaction_id` اختياري لربط السداد بفاتورة محددة
+7. ✅ **إزالة `type: any` casting**: تحسين TypeScript types في جميع الملفات
 
 ### 🟢 أولوية منخفضة
 
-8. **تفعيل `playSuccessSound`** بعد نجاح البيع
-9. **إزالة badge "في المخزن"** من CartItem أو تغييره لعرض معلومة مفيدة
+8. ✅ **تفعيل `playSuccessSound`** بعد نجاح البيع
+9. ✅ **إزالة badge "في المخزن"** من CartItem أو تغييره لعرض معلومة مفيدة
 10. **تحسين نظام الطباعة** لدعم الطابعات الحرارية (ESC/POS أو PDF receipt)
-11. **إضافة validation لرقم الهاتف** قبل حفظ العميل
+11. ✅ **إضافة validation لرقم الهاتف** قبل حفظ العميل
 12. **تحديد حد أقصى للسلال المعلقة** (مثلاً 10 سلال كحد أقصى)
 13. **تصحيح رسالة حذف العميل** لتوضح أنه Soft Delete
 

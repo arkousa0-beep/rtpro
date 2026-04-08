@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { exportToExcel } from "@/lib/services/exportService";
 import { useRouteGuard } from "@/hooks/useRouteGuard";
 import { useUIStore } from "@/lib/store/uiStore";
+import { toast } from "sonner";
 
 export default function CustomersPage() {
   const { isAuthorized, isLoading: isAuthLoading } = useRouteGuard('customers');
@@ -45,6 +46,10 @@ export default function CustomersPage() {
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (newCustomer.phone && !/^01[0125][0-9]{8}$/.test(newCustomer.phone)) {
+       toast.error("رقم الهاتف غير صالح. يجب أن يبدأ بـ 01 ويكون 11 رقمًا.");
+       return;
+    }
     const success = await addCustomer(newCustomer);
     if (success) {
       setNewCustomer({ name: "", phone: "", address: "" });

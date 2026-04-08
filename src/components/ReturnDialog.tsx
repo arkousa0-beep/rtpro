@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { playSuccessSound } from "@/lib/audioUtils";
 
 export function ReturnDialog() {
   const [open, setOpen] = useState(false);
@@ -79,6 +80,7 @@ export function ReturnDialog() {
         throw new Error((data as any)?.message || 'فشل إرجاع القطع');
       }
 
+      playSuccessSound();
       toast.success(`تم بنجاح إرجاع ${itemsToReturn.length} قطع وتحديث المعاملات`);
       setOpen(false);
       reset();
@@ -245,6 +247,8 @@ export function ReturnDialog() {
               </TabsList>
             </Tabs>
           </div>
+        </div>
+      </div>
 
           <div className="space-y-3">
             <Textarea
