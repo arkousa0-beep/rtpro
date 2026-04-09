@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ProfilePermissions } from "@/lib/database.types";
@@ -12,6 +12,7 @@ export function useRouteGuard(requiredPermission?: keyof ProfilePermissions | (k
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -22,8 +23,14 @@ export function useRouteGuard(requiredPermission?: keyof ProfilePermissions | (k
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
-          if (isMounted) setIsAuthorized(false);
-          router.replace("/login");
+          if (isMounted) {
+            setIsAuthorized(false);
+            setIsLoading(false);
+          }
+          if (!hasRedirected.current) {
+            hasRedirected.current = true;
+            router.replace("/login");
+          }
           return;
         }
 
@@ -34,8 +41,14 @@ export function useRouteGuard(requiredPermission?: keyof ProfilePermissions | (k
           .single();
 
         if (!profile) {
-          if (isMounted) setIsAuthorized(false);
-          router.replace("/");
+          if (isMounted) {
+            setIsAuthorized(false);
+            setIsLoading(false);
+          }
+          if (!hasRedirected.current) {
+            hasRedirected.current = true;
+            router.replace("/");
+          }
           return;
         }
 
@@ -68,25 +81,50 @@ export function useRouteGuard(requiredPermission?: keyof ProfilePermissions | (k
           hasAccess = perms?.[requiredPermission] === true;
         }
 
-        if (!hasAccess) {
-          if (isMounted) setIsAuthorized(false);
+        if (isMounted) {
+          setIsAuthorized(hasAccess);
+          setIsLoading(false);
+        }
+
+        if (!hasAccess && !hasRedirected.current) {
+          hasRedirected.current = true;
           router.replace("/");
-        } else {
-          if (isMounted) setIsAuthorized(true);
         }
       } catch (error) {
         console.error("Authorization check failed", error);
-        if (isMounted) setIsAuthorized(false);
-        router.replace("/");
-      } finally {
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setIsAuthorized(false);
+          setIsLoading(false);
+        }
+        if (!hasRedirected.current) {
+          hasRedirected.current = true;
+          router.replace("/");
+        }
       }
     }
 
     checkAuthorization();
 
+    // Listen for auth state changes to re-check on session restore
+    const supabase = createClient();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        hasRedirected.current = false;
+        setIsLoading(true);
+        setIsAuthorized(null);
+        checkAuthorization();
+      }
+      if (event === "SIGNED_OUT") {
+        hasRedirected.current = false;
+        setIsAuthorized(false);
+        setIsLoading(false);
+        router.replace("/login");
+      }
+    });
+
     return () => {
       isMounted = false;
+      subscription.unsubscribe();
     };
   }, [requiredPermission, router]);
 

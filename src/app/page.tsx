@@ -122,14 +122,44 @@ export default function Home() {
   ].filter(card => isAuthorized(card.permission));
 
   const quickActions = [
-    { title: "نقطة البيع (POS)", desc: "فتح واجهة المبيعات السريعة", icon: ShoppingCart, color: "emerald", href: "/pos", permission: "pos" },
-    { title: "إضافة للمخزن", desc: "تسجيل بضاعة جديدة في المتجر", icon: PlusCircle, color: "primary", href: "/inventory", permission: "inventory" },
+    { title: "نقطة البيع (POS)", desc: "فتح واجهة المبيعات السريعة", icon: ShoppingCart, color: "emerald" as const, href: "/pos", permission: "pos" },
+    { title: "إضافة للمخزن", desc: "تسجيل بضاعة جديدة في المتجر", icon: PlusCircle, color: "primary" as const, href: "/inventory", permission: "inventory" },
   ].filter(action => isAuthorized(action.permission));
 
   const bottomActions = [
     { title: "سجل العمليات", icon: History, href: "/transactions", permission: "transactions" },
     { title: "إدارة العملاء", icon: Users, href: "/customers", permission: "customers" },
   ].filter(action => isAuthorized(action.permission));
+
+  // Static color mappings for Tailwind to scan at build time
+  const quickActionStyles: Record<string, {
+    gradientFrom: string;
+    gradientBorder: string;
+    iconBg: string;
+    iconShadow: string;
+    textPrimary: string;
+    accentBg: string;
+    accentBlur: string;
+  }> = {
+    emerald: {
+      gradientFrom: 'from-emerald-500/10',
+      gradientBorder: 'border-emerald-500/10',
+      iconBg: 'bg-emerald-500',
+      iconShadow: 'shadow-emerald-500/40',
+      textPrimary: 'text-emerald-400',
+      accentBg: 'bg-emerald-500/20',
+      accentBlur: 'bg-emerald-500/20',
+    },
+    primary: {
+      gradientFrom: 'from-primary/10',
+      gradientBorder: 'border-primary/10',
+      iconBg: 'bg-primary',
+      iconShadow: 'shadow-primary/40',
+      textPrimary: 'text-primary-foreground',
+      accentBg: 'bg-primary/20',
+      accentBlur: 'bg-primary/20',
+    },
+  };
 
   return (
     <div className="space-y-8 pb-10">
@@ -233,24 +263,27 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          {quickActions.map((action) => (
+          {quickActions.map((action) => {
+            const st = quickActionStyles[action.color] || quickActionStyles.primary;
+            return (
             <Link key={action.title} href={action.href}>
               <div className="group relative overflow-hidden rounded-[2.5rem] bg-white/[0.02] border border-white/5 p-1 transition-all hover:bg-white/[0.05] active:scale-[0.98]">
-                <div className={`flex items-center gap-6 p-6 rounded-[2.3rem] bg-gradient-to-br from-${action.color}-500/10 to-transparent border border-${action.color}-500/10 shadow-2xl overflow-hidden relative`}>
-                  <div className={`w-18 h-18 min-w-[4.5rem] rounded-3xl bg-${action.color}-500 flex items-center justify-center text-white shadow-2xl shadow-${action.color}-500/40 group-hover:scale-105 transition-transform duration-500 relative z-10`}>
+                <div className={`flex items-center gap-6 p-6 rounded-[2.3rem] bg-gradient-to-br ${st.gradientFrom} to-transparent ${st.gradientBorder} border shadow-2xl overflow-hidden relative`}>
+                  <div className={`w-18 h-18 min-w-[4.5rem] rounded-3xl ${st.iconBg} flex items-center justify-center text-white shadow-2xl ${st.iconShadow} group-hover:scale-105 transition-transform duration-500 relative z-10`}>
                     <action.icon className="w-9 h-9" />
                   </div>
                   <div className="flex-1 text-right relative z-10">
-                    <p className={`font-black text-2xl text-${action.color}-400 mb-1 tracking-tight`}>{action.title}</p>
+                    <p className={`font-black text-2xl ${st.textPrimary} mb-1 tracking-tight`}>{action.title}</p>
                     <p className={`text-sm text-white/40 font-bold tracking-tight`}>{action.desc}</p>
                   </div>
                   {/* Background Accents */}
-                  <div className={`absolute -left-10 -bottom-10 w-32 h-32 bg-${action.color}-500/20 rounded-full blur-[60px] group-hover:scale-150 transition-transform duration-700`} />
-                  <div className={`absolute top-0 right-0 w-2 h-full bg-${action.color}-500/20 blur-sm`} />
+                  <div className={`absolute -left-10 -bottom-10 w-32 h-32 ${st.accentBg} rounded-full blur-[60px] group-hover:scale-150 transition-transform duration-700`} />
+                  <div className={`absolute top-0 right-0 w-2 h-full ${st.accentBlur} blur-sm`} />
                 </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
 
           <div className="grid grid-cols-2 gap-4">
             {bottomActions.map((action) => (

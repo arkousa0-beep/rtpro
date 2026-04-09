@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { ServiceWorkerRegister } from "@/components/layout/ServiceWorkerRegister";
 import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
 
@@ -28,8 +29,7 @@ export const viewport: Viewport = {
   themeColor: "#f97316",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Allow zooming for accessibility (WCAG 2.1 compliance)
 };
 
 export default function RootLayout({
@@ -40,14 +40,16 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className="dark">
       <body className={cn(cairo.className, "min-h-screen bg-background text-foreground antialiased selection:bg-primary/30")}>
-        <ServiceWorkerRegister />
-        <OfflineIndicator />
-        
-        <AppShell>
-          {children}
-        </AppShell>
+        <ErrorBoundary>
+          <ServiceWorkerRegister />
+          <OfflineIndicator />
+          
+          <AppShell>
+            {children}
+          </AppShell>
 
-        <Toaster theme="dark" position="top-center" richColors />
+          <Toaster theme="dark" position="bottom-center" richColors />
+        </ErrorBoundary>
       </body>
     </html>
   );
