@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { Item } from "@/lib/database.types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { playSuccessSound } from "@/lib/audioUtils";

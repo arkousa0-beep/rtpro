@@ -17,7 +17,8 @@ import {
   CreditCard,
   History,
   LayoutGrid,
-  Box
+  Box,
+  RotateCcw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,6 +48,7 @@ const ALL_LINKS: NavLink[] = [
   { name: "العملاء",   href: "/customers", icon: Users,      group: "business", permission: "customers" },
   { name: "الموردين",  href: "/suppliers", icon: Truck,      group: "business", permission: "suppliers" },
   { name: "الديون",    href: "/debts",     icon: CreditCard, group: "business", permission: "finance" },
+  { name: "المرتجعات", href: "/returns", icon: RotateCcw, group: "business", permission: "transactions" },
   { name: "الحركات",   href: "/transactions", icon: History, group: "business", permission: "transactions" },
   
   // Admin

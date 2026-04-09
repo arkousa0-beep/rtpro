@@ -151,7 +151,7 @@ export async function exportToExcel(
   // Data rows
   rows.forEach((row) => {
     const dataRow = worksheet.addRow(row);
-    dataRow.eachCell((cell, colNumber) => {
+    dataRow.eachCell((cell) => {
       // Alternate row shading
       const rowIndex = dataRow.number;
       if (rowIndex % 2 === 0) {

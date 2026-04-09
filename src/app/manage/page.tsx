@@ -10,7 +10,8 @@ import {
   Settings,
   ShieldCheck,
   PackageSearch,
-  CreditCard
+  CreditCard,
+  RotateCcw
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -79,6 +80,16 @@ const allManageItems = [
     color: "from-cyan-500/20 to-cyan-600/5",
     iconColor: "text-cyan-500",
     borderColor: "group-hover:border-cyan-500/50",
+    permission: "transactions"
+  },
+  {
+    title: "المرتجعات",
+    desc: "سجل عمليات الإرجاع والاسترجاع",
+    icon: RotateCcw,
+    href: "/returns",
+    color: "from-orange-500/20 to-orange-600/5",
+    iconColor: "text-orange-500",
+    borderColor: "group-hover:border-orange-500/50",
     permission: "transactions"
   },
   {
