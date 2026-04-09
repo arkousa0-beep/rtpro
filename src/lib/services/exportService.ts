@@ -2,7 +2,7 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 // ── PDF Export ──────────────────────────────────────────────────────────────
 
@@ -117,32 +117,76 @@ export function exportToPDF(
 // ── Excel Export ────────────────────────────────────────────────────────────
 
 /**
- * Exports data to an Excel (.xlsx) file.
+ * Exports data to an Excel (.xlsx) file using ExcelJS.
  */
-export function exportToExcel(
+export async function exportToExcel(
   title: string,
   columns: string[],
   rows: (string | number)[][]
 ) {
-  const worksheetData = [columns, ...rows];
-  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(title.slice(0, 31));
+
+  // RTL sheet direction
+  worksheet.views = [{ rightToLeft: true }];
+
+  // Header row
+  const headerRow = worksheet.addRow(columns);
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF97316' }, // primary orange
+    };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FFDCDCDC' } },
+      bottom: { style: 'thin', color: { argb: 'FFDCDCDC' } },
+      left: { style: 'thin', color: { argb: 'FFDCDCDC' } },
+      right: { style: 'thin', color: { argb: 'FFDCDCDC' } },
+    };
+  });
+
+  // Data rows
+  rows.forEach((row) => {
+    const dataRow = worksheet.addRow(row);
+    dataRow.eachCell((cell, colNumber) => {
+      // Alternate row shading
+      const rowIndex = dataRow.number;
+      if (rowIndex % 2 === 0) {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF8F8F8' },
+        };
+      }
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFDCDCDC' } },
+        bottom: { style: 'thin', color: { argb: 'FFDCDCDC' } },
+        left: { style: 'thin', color: { argb: 'FFDCDCDC' } },
+        right: { style: 'thin', color: { argb: 'FFDCDCDC' } },
+      };
+    });
+  });
 
   // Auto-width columns
-  const colWidths = columns.map((col, i) => {
+  worksheet.columns.forEach((col, i) => {
     const maxDataLen = Math.max(
-      col.length,
+      columns[i]?.length ?? 0,
       ...rows.map((row) => String(row[i] ?? '').length)
     );
-    return { wch: Math.min(Math.max(maxDataLen + 2, 10), 40) };
+    col.width = Math.min(Math.max(maxDataLen + 2, 10), 40);
   });
-  worksheet['!cols'] = colWidths;
-
-  // RTL sheet
-  worksheet['!dir'] = 'rtl';
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, title.slice(0, 31));
 
   const safeName = title.replace(/[^\u0621-\u064A\w\s]/g, '').trim() || 'report';
-  XLSX.writeFile(workbook, `${safeName}.xlsx`);
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${safeName}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }

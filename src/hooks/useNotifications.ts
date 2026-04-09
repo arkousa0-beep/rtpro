@@ -33,7 +33,7 @@ export function useNotifications() {
     fetchNotifications();
 
     const channel = supabase
-      .channel('public:notifications')
+      .channel(`public:notifications-${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         {
