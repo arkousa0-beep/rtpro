@@ -5,6 +5,10 @@ import { createSupplierAction, updateSupplierAction, deleteSupplierAction } from
 import { useRealtimeSubscription } from './useRealtimeSubscription';
 import { useUIStore } from '@/lib/store/uiStore';
 import { useDataStore } from '@/lib/store/dataStore';
+import { getFromCache, saveToCache } from '@/lib/services/offlineService';
+
+const CACHE_KEY = 'suppliers';
+const CACHE_TTL = 15 * 60 * 1000;
 
 export function useSuppliers() {
   const { suppliers, isHydrated, setSuppliers, addSupplier: storeAdd, updateSupplier: storeUpdate, removeSupplier: storeRemove } = useDataStore();
@@ -13,17 +17,30 @@ export function useSuppliers() {
   const { lastRefresh } = useUIStore();
 
   const fetchSuppliers = useCallback(async (silent = false) => {
+    if (!silent) {
+      const cached = getFromCache<Supplier[]>(CACHE_KEY, CACHE_TTL);
+      if (cached) {
+        setSuppliers(cached);
+        setLoading(false);
+        silent = true;
+      }
+    }
+
     if (!silent) setLoading(true);
     try {
       const data = await supplierService.getAll();
-      setSuppliers(data || []);
+      const finalData = data || [];
+      setSuppliers(finalData);
+      saveToCache(CACHE_KEY, finalData);
     } catch (err: any) {
       console.error('Suppliers fetch error:', err);
+      const stale = getFromCache<Supplier[]>(CACHE_KEY);
+      if (stale && suppliers.length === 0) setSuppliers(stale);
       if (!silent) toast.error(err.message || 'حدث خطأ أثناء جلب الموردين');
     } finally {
       setLoading(false);
     }
-  }, [setSuppliers]);
+  }, [setSuppliers, suppliers.length]);
 
   useEffect(() => {
     fetchSuppliers(!isHydrated.suppliers);

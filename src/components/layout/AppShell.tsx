@@ -97,9 +97,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             }}
           >
             <motion.div 
-              layout
-              initial={{ opacity: 0, y: 20 }}
+              key={pathname}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className="px-4 lg:px-12 xl:px-24 max-w-7xl mx-auto text-right"
             >
               {children}

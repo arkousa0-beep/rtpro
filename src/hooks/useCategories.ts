@@ -5,6 +5,10 @@ import { createCategoryAction, updateCategoryAction, deleteCategoryAction } from
 import { useRealtimeSubscription } from './useRealtimeSubscription';
 import { useUIStore } from '@/lib/store/uiStore';
 import { useDataStore } from '@/lib/store/dataStore';
+import { getFromCache, saveToCache } from '@/lib/services/offlineService';
+
+const CACHE_KEY = 'categories';
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 export function useCategories() {
   const { categories, isHydrated, setCategories, addCategory: storeAdd, updateCategory: storeUpdate, removeCategory: storeRemove } = useDataStore();
@@ -13,17 +17,37 @@ export function useCategories() {
   const { lastRefresh } = useUIStore();
 
   const fetchCategories = useCallback(async (silent = false) => {
+    // ⚡ Optimization: Check cache first if not performing a forced silent refresh
+    if (!silent) {
+      const cached = getFromCache<Category[]>(CACHE_KEY, CACHE_TTL);
+      if (cached) {
+        setCategories(cached);
+        setLoading(false);
+        silent = true; // Still fetch in background but don't show loading
+      }
+    }
+
     if (!silent) setLoading(true);
+    
     try {
       const data = await categoryService.getAll();
-      setCategories(data || []);
+      const finalData = data || [];
+      setCategories(finalData);
+      saveToCache(CACHE_KEY, finalData);
     } catch (err: any) {
       console.error('Categories fetch error:', err);
+      
+      // Fallback: If network fails, try to use any stale cache even if older than TTL
+      const stale = getFromCache<Category[]>(CACHE_KEY);
+      if (stale && categories.length === 0) {
+        setCategories(stale);
+      }
+      
       if (!silent) toast.error(err.message || 'حدث خطأ أثناء جلب التصنيفات');
     } finally {
       setLoading(false);
     }
-  }, [setCategories]);
+  }, [setCategories, categories.length]);
 
   useEffect(() => {
     fetchCategories(!isHydrated.categories);

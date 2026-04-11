@@ -6,6 +6,10 @@ import { toast } from 'sonner';
 import { useRealtimeSubscription } from './useRealtimeSubscription';
 import { useUIStore } from '@/lib/store/uiStore';
 import { useDataStore } from '@/lib/store/dataStore';
+import { getFromCache, saveToCache } from '@/lib/services/offlineService';
+
+const CACHE_KEY = 'products';
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
 export function useProducts() {
   const { products, isHydrated, setProducts, addProduct: storeAdd, updateProduct: storeUpdate, removeProduct: storeRemove } = useDataStore();
@@ -15,21 +19,40 @@ export function useProducts() {
   const { lastRefresh } = useUIStore();
 
   const fetchProducts = useCallback(async (silent = false) => {
+    // ⚡ Early Exit: serving from cache if valid
+    if (!silent) {
+      const cached = getFromCache<Product[]>(CACHE_KEY, CACHE_TTL);
+      if (cached) {
+        setProducts(cached);
+        setLoading(false);
+        silent = true; // Proceed with background sync but skip main loading state
+      }
+    }
+
     if (!silent) setLoading(true);
+    
     try {
       const data = await productService.getAll();
-      setProducts((data as Product[]) || []);
+      const finalData = (data as Product[]) || [];
+      setProducts(finalData);
+      saveToCache(CACHE_KEY, finalData);
     } catch (err: any) {
       console.error('Products fetch error:', err);
-      // Don't toast on silent background refresh to avoid annoying the user
+      
+      // Attempt to recover using stale cache if current data is empty
+      const stale = getFromCache<Product[]>(CACHE_KEY);
+      if (stale && products.length === 0) {
+        setProducts(stale);
+      }
+      
       if (!silent) toast.error(err.message || 'حدث خطأ أثناء جلب المنتجات');
     } finally {
       setLoading(false);
     }
-  }, [setProducts]);
+  }, [setProducts, products.length]);
 
   useEffect(() => {
-    // If not hydrated, do a full load. If hydrated, do a silent refresh.
+    // If not hydrated, check cache first then fetch.
     fetchProducts(!isHydrated.products);
   }, [fetchProducts, lastRefresh, isHydrated.products]);
 

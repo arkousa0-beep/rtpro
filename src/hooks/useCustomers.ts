@@ -5,6 +5,10 @@ import { createCustomerAction, updateCustomerAction, deleteCustomerAction } from
 import { useRealtimeSubscription } from './useRealtimeSubscription';
 import { useUIStore } from '@/lib/store/uiStore';
 import { useDataStore } from '@/lib/store/dataStore';
+import { getFromCache, saveToCache } from '@/lib/services/offlineService';
+
+const CACHE_KEY = 'customers';
+const CACHE_TTL = 15 * 60 * 1000;
 
 export function useCustomers() {
   const { customers, isHydrated, setCustomers, addCustomer: storeAdd, updateCustomer: storeUpdate, removeCustomer: storeRemove } = useDataStore();
@@ -13,17 +17,30 @@ export function useCustomers() {
   const { lastRefresh } = useUIStore();
 
   const fetchCustomers = useCallback(async (silent = false) => {
+    if (!silent) {
+      const cached = getFromCache<Customer[]>(CACHE_KEY, CACHE_TTL);
+      if (cached) {
+        setCustomers(cached);
+        setLoading(false);
+        silent = true;
+      }
+    }
+
     if (!silent) setLoading(true);
     try {
       const data = await customerService.getAll();
-      setCustomers(data || []);
+      const finalData = data || [];
+      setCustomers(finalData);
+      saveToCache(CACHE_KEY, finalData);
     } catch (err: any) {
       console.error('Customers fetch error:', err);
+      const stale = getFromCache<Customer[]>(CACHE_KEY);
+      if (stale && customers.length === 0) setCustomers(stale);
       if (!silent) toast.error(err.message || 'حدث خطأ أثناء جلب العملاء');
     } finally {
       setLoading(false);
     }
-  }, [setCustomers]);
+  }, [setCustomers, customers.length]);
 
   useEffect(() => {
     fetchCustomers(!isHydrated.customers);

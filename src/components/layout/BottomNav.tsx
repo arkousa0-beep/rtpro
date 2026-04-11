@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Home, Scan, Package, TrendingUp, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/AuthProvider";
 import { ProfilePermissions } from "@/lib/database.types";
 import { useHaptics } from "@/hooks/useHaptics";
 
@@ -27,42 +27,13 @@ const ALL_LINKS: NavLink[] = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const [links, setLinks] = useState<NavLink[]>(ALL_LINKS);
+  const { hasPermission, isLoading } = useAuth();
   const { selection } = useHaptics();
 
-  useEffect(() => {
-    async function loadPermissions() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role, permissions")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile) return;
-
-      const perms = profile.permissions as ProfilePermissions;
-      const isManager = profile.role === "Manager";
-
-      setLinks(
-        ALL_LINKS.filter((link) => {
-          if (!link.permission) return true; // always visible (Home)
-          if (isManager) return true;
-          
-          if (Array.isArray(link.permission)) {
-            return link.permission.some((p) => perms?.[p] === true);
-          }
-          
-          return perms?.[link.permission] === true;
-        })
-      );
-    }
-
-    loadPermissions();
-  }, []);
+  const links = ALL_LINKS.filter((link) => {
+    if (!link.permission) return true;
+    return hasPermission(link.permission);
+  });
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 h-20 glass border-t border-white/5 flex md:hidden items-center justify-around px-2 pb-6 pt-2">

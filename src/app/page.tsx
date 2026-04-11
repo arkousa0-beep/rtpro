@@ -19,81 +19,19 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
+import { useAuth } from "@/lib/auth/AuthProvider";
+
 import { productService } from "@/lib/services/productService";
 
 export default function Home() {
+  const { profile, isLoading: authLoading, hasPermission } = useAuth();
   const [stats, setStats] = useState({
-    totalItems: 0,
-    lowStock: 0,
-    todaySales: 0,
-    yesterdaySales: 0,
-    customers: 0,
-    totalCost: 0,
-    totalSelling: 0
-  });
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
+// ... (omitted similar lines)
   async function fetchStats() {
     try {
-      // Get User Info
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        setProfile(profileData);
-      }
-
       // 1. Inventory Stats from RPC
       const inventoryStats = await productService.getInventoryStats();
-
-      // 2. Customers
-      const { count: customersCount } = await supabase
-        .from('customers')
-        .select('*', { count: 'exact', head: true });
-
-      // 3. Today's & Yesterday's Sales (for real growth calculation)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      const [todayRes, yesterdayRes] = await Promise.all([
-        supabase
-          .from('transactions')
-          .select('total')
-          .eq('type', 'Sale')
-          .gte('created_at', today.toISOString()),
-        supabase
-          .from('transactions')
-          .select('total')
-          .eq('type', 'Sale')
-          .gte('created_at', yesterday.toISOString())
-          .lt('created_at', today.toISOString()),
-      ]);
-
-      const todayTotal = todayRes.data?.reduce((acc, curr) => acc + Number(curr.total), 0) || 0;
-      const yesterdayTotal = yesterdayRes.data?.reduce((acc, curr) => acc + Number(curr.total), 0) || 0;
-
-      setStats({
-        totalItems: Number(inventoryStats.total_items) || 0,
-        lowStock: Number(inventoryStats.low_stock_count) || 0,
-        todaySales: todayTotal,
-        yesterdaySales: yesterdayTotal,
-        customers: customersCount || 0,
-        totalCost: Number(inventoryStats.total_cost_value) || 0,
-        totalSelling: Number(inventoryStats.total_selling_value) || 0
-      });
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
+// ... (omitted similar lines)
   useEffect(() => {
     fetchStats();
   }, []);
@@ -107,29 +45,23 @@ export default function Home() {
       fetchStats();
     },
   });
-  const isAuthorized = (perm?: string) => {
-    if (!perm) return true;
-    if (loading || !profile) return false;
-    if (profile.role === "Manager") return true;
-    return profile.permissions?.[perm] === true;
-  };
 
   const cards = [
     { title: "مبيعات اليوم", value: `${stats.todaySales}`, unit: "ج.م", icon: TrendingUp, color: "text-primary", bg: "bg-primary/10", href: "/transactions", permission: "transactions" },
     { title: "المخزن", value: stats.totalItems, unit: "قطع", icon: Package, color: "text-amber-400", bg: "bg-amber-400/10", href: "/inventory", permission: "inventory" },
     { title: "قيمة المخزن (بيع)", value: stats.totalSelling.toLocaleString(), unit: "ج.م", icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-400/10", href: "/inventory", permission: "inventory" },
     { title: "النواقص", value: stats.lowStock, unit: "منتج", icon: AlertCircle, color: "text-red-400", bg: "bg-red-400/10", href: "/inventory", permission: "inventory" },
-  ].filter(card => isAuthorized(card.permission));
+  ].filter(card => hasPermission(card.permission as any));
 
   const quickActions = [
     { title: "نقطة البيع (POS)", desc: "فتح واجهة المبيعات السريعة", icon: ShoppingCart, color: "emerald" as const, href: "/pos", permission: "pos" },
     { title: "إضافة للمخزن", desc: "تسجيل بضاعة جديدة في المتجر", icon: PlusCircle, color: "primary" as const, href: "/inventory", permission: "inventory" },
-  ].filter(action => isAuthorized(action.permission));
+  ].filter(action => hasPermission(action.permission as any));
 
   const bottomActions = [
     { title: "سجل العمليات", icon: History, href: "/transactions", permission: "transactions" },
     { title: "إدارة العملاء", icon: Users, href: "/customers", permission: "customers" },
-  ].filter(action => isAuthorized(action.permission));
+  ].filter(action => hasPermission(action.permission as any));
 
   // Static color mappings for Tailwind to scan at build time
   const quickActionStyles: Record<string, {
