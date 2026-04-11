@@ -26,12 +26,61 @@ import { productService } from "@/lib/services/productService";
 export default function Home() {
   const { profile, isLoading: authLoading, hasPermission } = useAuth();
   const [stats, setStats] = useState({
-// ... (omitted similar lines)
+    totalItems: 0,
+    lowStock: 0,
+    todaySales: 0,
+    yesterdaySales: 0,
+    customers: 0,
+    totalCost: 0,
+    totalSelling: 0
+  });
+
   async function fetchStats() {
     try {
       // 1. Inventory Stats from RPC
       const inventoryStats = await productService.getInventoryStats();
-// ... (omitted similar lines)
+
+      // 2. Customers
+      const { count: customersCount } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true });
+
+      // 3. Today's & Yesterday's Sales (for real growth calculation)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const [todayRes, yesterdayRes] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('total')
+          .eq('type', 'Sale')
+          .gte('created_at', today.toISOString()),
+        supabase
+          .from('transactions')
+          .select('total')
+          .eq('type', 'Sale')
+          .gte('created_at', yesterday.toISOString())
+          .lt('created_at', today.toISOString()),
+      ]);
+
+      const todayTotal = todayRes.data?.reduce((acc: any, curr: any) => acc + Number(curr.total), 0) || 0;
+      const yesterdayTotal = yesterdayRes.data?.reduce((acc: any, curr: any) => acc + Number(curr.total), 0) || 0;
+
+      setStats({
+        totalItems: Number(inventoryStats.total_items) || 0,
+        lowStock: Number(inventoryStats.low_stock_count) || 0,
+        todaySales: todayTotal,
+        yesterdaySales: yesterdayTotal,
+        customers: customersCount || 0,
+        totalCost: Number(inventoryStats.total_cost_value) || 0,
+        totalSelling: Number(inventoryStats.total_selling_value) || 0
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  }
   useEffect(() => {
     fetchStats();
   }, []);
