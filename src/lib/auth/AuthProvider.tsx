@@ -30,7 +30,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchAuth = async () => {
     try {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (error && error.name !== 'AuthSessionMissingError' && error.status !== 400 && error.status !== 401) {
+        throw error;
+      }
+
       setUser(user);
 
       if (user) {
@@ -44,9 +49,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: profileData.role,
           permissions: profileData.permissions as ProfilePermissions,
         } : null);
+      } else {
+        setProfile(null);
       }
-    } catch (error) {
-      console.error("Auth fetch error:", error);
+    } catch (error: any) {
+      if (error?.name !== 'AuthSessionMissingError') {
+        console.error("Auth fetch error:", error);
+      }
     } finally {
       setIsLoading(false);
       fetchedRef.current = true;

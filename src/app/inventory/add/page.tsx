@@ -278,6 +278,7 @@ function AddItemForm() {
               <CameraScannerDialog
                 open={isCameraOpen}
                 onClose={() => setIsCameraOpen(false)}
+                continuous={mode === 'batch'}
                 onScan={(barcode) => {
                   if (mode === 'single') {
                     setFormData(prev => ({ ...prev, barcode }));

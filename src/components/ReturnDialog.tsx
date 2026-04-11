@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,13 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { playSuccessSound } from "@/lib/audioUtils";
 
-export function ReturnDialog() {
+interface ReturnDialogProps {
+  customTrigger?: React.ReactNode;
+  initialItems?: Item[];
+  initialCustomerId?: string | null;
+}
+
+export function ReturnDialog({ customTrigger, initialItems, initialCustomerId }: ReturnDialogProps = {}) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [barcode, setBarcode] = useState("");
@@ -24,8 +30,15 @@ export function ReturnDialog() {
   const [reason, setReason] = useState("");
   const [refundMethod, setRefundMethod] = useState<"Cash" | "Balance">("Cash");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>('walkin');
   const { customers } = useCustomers();
+
+  useEffect(() => {
+    if (open) {
+      setItemsToReturn(initialItems || []);
+      setSelectedCustomerId(initialCustomerId || 'walkin');
+    }
+  }, [open, initialItems, initialCustomerId]);
 
   const handleSearch = async () => {
     if (!barcode.trim()) return;
@@ -102,13 +115,15 @@ export function ReturnDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
-          className="h-20 rounded-[2rem] flex-1 border-white/5 bg-white/5 text-xl font-bold text-white/60 hover:text-white hover:bg-white/10 hover:border-amber-500/30 transition-all group"
-        >
-          <RotateCcw className="w-6 h-6 ml-3 text-amber-500 group-hover:rotate-[-45deg] transition-transform" />
-          مرتجع مبيعات
-        </Button>
+        {customTrigger ? customTrigger : (
+          <Button 
+            variant="outline" 
+            className="h-20 rounded-[2rem] flex-1 border-white/5 bg-white/5 text-xl font-bold text-white/60 hover:text-white hover:bg-white/10 hover:border-amber-500/30 transition-all group"
+          >
+            <RotateCcw className="w-6 h-6 ml-3 text-amber-500 group-hover:rotate-[-45deg] transition-transform" />
+            مرتجع مبيعات
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="glass border-white/10 rounded-[3rem] sm:max-w-xl p-8 overflow-hidden bg-black/95 backdrop-blur-3xl shadow-2xl shadow-amber-500/10">
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -z-10" />

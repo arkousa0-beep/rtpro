@@ -22,9 +22,11 @@ export function useRouteGuard(requiredPermission?: keyof ProfilePermissions | (k
       const supabase = createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-      if (authError && authError.status !== 401) throw authError;
+      if (authError && authError.name !== 'AuthSessionMissingError' && authError.status !== 401 && authError.status !== 400) {
+        throw authError;
+      }
 
-      if (!user) {
+      if (!user || (authError && authError.name === 'AuthSessionMissingError')) {
         setIsAuthorized(false);
         setIsLoading(false);
         if (!hasRedirected.current) {

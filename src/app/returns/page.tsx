@@ -22,6 +22,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useReturns } from "@/hooks/useReturns";
 import { ReturnDetailsDrawer } from "@/components/management/ReturnDetailsDrawer";
+import { ReturnDialog } from "@/components/ReturnDialog";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { exportToPDF, exportToExcel } from "@/lib/services/exportService";
 import { useRouteGuard } from "@/hooks/useRouteGuard";
@@ -137,6 +138,22 @@ export default function ReturnsPage() {
       onRefresh={refresh}
       iconColor="text-amber-500"
       buttonColor="bg-amber-600"
+      extraContent={
+        <div className="flex justify-end pt-4">
+          <ReturnDialog
+            customTrigger={
+              <Button 
+                variant="outline" 
+                className="h-14 px-8 rounded-[1.5rem] bg-amber-500 hover:bg-amber-400 text-black font-black text-lg border-none shadow-xl shadow-amber-500/20 active:scale-[0.98] transition-all gap-3 overflow-hidden group relative"
+              >
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                <RotateCcw className="w-5 h-5 relative z-10 group-hover:-rotate-45 transition-transform duration-300" />
+                <span className="relative z-10">إرجاع بضاعة جديد</span>
+              </Button>
+            }
+          />
+        </div>
+      }
       addDialogContent={
         <div className="flex flex-col gap-4 p-6">
           <Button onClick={handleExportPDF} className="h-14 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-lg gap-3">

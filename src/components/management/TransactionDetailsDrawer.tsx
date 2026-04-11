@@ -18,13 +18,16 @@ import {
   MessageCircle,
   Hash,
   Clock,
-  ChevronLeft
+  ChevronLeft,
+  RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { transactionService, TransactionDetails } from "@/lib/services/transactionService";
 import { Badge } from "@/components/ui/badge";
+import { ReturnDialog } from "@/components/ReturnDialog";
+import { Item } from "@/lib/database.types";
 
 interface TransactionDetailsDrawerProps {
   transactionId: string | null;
@@ -227,10 +230,35 @@ export function TransactionDetailsDrawer({
                   <Printer className="w-5 h-5" />
                   طباعة الإيصال
                 </Button>
+                {transaction.type === 'Sale' && (
+                  <ReturnDialog
+                    initialCustomerId={transaction.customer_id}
+                    initialItems={(transaction.items || []).map((i: any) => ({
+                      id: i.id || i.barcode || '',
+                      created_at: '',
+                      barcode: i.barcode || '',
+                      batch_id: null,
+                      buying_price: 0,
+                      selling_price: Number(i.price) || 0,
+                      status: 'Sold',
+                      product_id: i.products?.id || '',
+                      products: { name: i.products?.name || '' }
+                    } as unknown as Item))}
+                    customTrigger={
+                      <Button 
+                        variant="outline"
+                        className="flex-1 sm:flex-none h-14 px-6 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border-amber-500/20 font-black gap-2 transition-all order-2 sm:order-3"
+                      >
+                        <RotateCcw className="w-5 h-5" />
+                        إرجاع مبدئي
+                      </Button>
+                    }
+                  />
+                )}
                 {transaction.customers?.phone && (
                    <Button 
                       variant="outline"
-                      className="w-full sm:w-14 h-14 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 p-0 active:scale-95 transition-all order-2 sm:order-1"
+                      className="w-full sm:w-14 h-14 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 p-0 active:scale-95 transition-all order-3 sm:order-1"
                       onClick={() => window.open(`tel:${transaction.customers?.phone}`)}
                     >
                       <MessageCircle className="w-6 h-6" />
