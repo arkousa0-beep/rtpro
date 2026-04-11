@@ -1,23 +1,33 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { X, Camera, AlertCircle } from 'lucide-react';
+import { X, AlertCircle, Crosshair } from 'lucide-react';
 import { playSuccessSound } from '@/lib/audioUtils';
 
 // Dynamically import the scanner to avoid SSR issues
-const Scanner = dynamic(
-  () => import('@yudiel/react-qr-scanner').then((mod) => mod.Scanner),
-  { ssr: false, loading: () => <div className="w-full h-full bg-black/50 animate-pulse rounded-[3rem]" /> }
+const BarcodeScanner = dynamic(
+  () => import('react-barcode-scanner').then((mod) => mod.BarcodeScanner),
+  { ssr: false, loading: () => <div className="w-full h-full bg-black/50 animate-pulse rounded-[2rem]" /> }
 );
+
+// Import polyfill on client side only
+if (typeof window !== 'undefined') {
+  import('react-barcode-scanner/polyfill').catch(() => {});
+}
+
+/** All supported barcode formats */
+const ALL_FORMATS = [
+  'ean_13', 'ean_8', 'upc_a', 'upc_e',
+  'code_128', 'code_39', 'code_93', 'codabar', 'itf',
+  'qr_code',
+] as const;
 
 interface CameraScannerDialogProps {
   open: boolean;
   onClose: () => void;
   onScan: (barcode: string) => void;
-  // Optional cooldown in ms to prevent duplicate scans
   cooldownMs?: number;
-  /** If true, the scanner stays open after a successful scan (useful for batching) */
   continuous?: boolean;
 }
 
@@ -31,65 +41,123 @@ export function CameraScannerDialog({
   const [error, setError] = useState<string | null>(null);
   const [lastScanned, setLastScanned] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState(0);
+  const [isFlashing, setIsFlashing] = useState(false);
+  const [manualScanning, setManualScanning] = useState(false);
   const lastScanTimeRef = useRef<number>(0);
-  
+  const scannerContainerRef = useRef<HTMLDivElement>(null);
+
   const onScanRef = useRef(onScan);
   useEffect(() => {
     onScanRef.current = onScan;
   }, [onScan]);
 
-  // Reset counters when the dialog opens
+  // Scanner options
+  const scanOptions = useMemo(() => ({
+    delay: 100,
+    formats: [...ALL_FORMATS],
+  }), []);
+
+  // Reset state when dialog opens
   useEffect(() => {
     if (open) {
       setLastScanned(null);
       setScanCount(0);
       lastScanTimeRef.current = 0;
       setError(null);
+      setIsFlashing(false);
+      setManualScanning(false);
     }
   }, [open]);
 
-  const handleScan = useCallback((detectedCodes: any[]) => {
-    if (!detectedCodes || detectedCodes.length === 0) return;
-    
-    // We only care about the first detected code in the frame
-    const text = detectedCodes[0].rawValue;
-    if (!text) return;
-
+  /** Shared handler for processing a successful barcode result */
+  const processResult = useCallback((text: string) => {
     const now = Date.now();
     if (now - lastScanTimeRef.current > cooldownMs) {
       lastScanTimeRef.current = now;
-      
-      // Force mobile vibration feedback if supported
+
+      // Haptic feedback
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(100);
       }
-      
+
+      // Flash effect
+      setIsFlashing(true);
+      setTimeout(() => setIsFlashing(false), 200);
+
       playSuccessSound();
       setLastScanned(text);
       setScanCount(prev => prev + 1);
       onScanRef.current(text);
 
-      // Auto-close if not in continuous mode
       if (!continuous) {
-        setTimeout(onClose, 400); // Small delay to let user see the "Success" state
+        setTimeout(onClose, 400);
       }
     }
   }, [cooldownMs, continuous, onClose]);
 
-  const handleError = useCallback((err: unknown) => {
-    console.error("Camera Error:", err);
-    const msg = err instanceof Error ? err.message : String(err);
-    
-    if (msg.includes('Permission') || msg.includes('NotAllowedError')) {
-      setError("لم يتم السماح بالوصول للكاميرا. يرجى إعطاء الصلاحية من إعدادات المتصفح.");
-    } else if (msg.includes('NotFoundError')) {
-      setError("لم يتم العثور على كاميرا متاحة في هذا الجهاز.");
-    } else if (msg.includes('NotReadableError')) {
-      setError("الكاميرا مستخدمة حالياً بواسطة تطبيق آخر.");
-    } else {
-      setError("تعذر تشغيل الكاميرا. تأكد من إعطاء الصلاحيات الكافية.");
+  /** Auto-scan callback from react-barcode-scanner */
+  const handleCapture = useCallback((barcodes: any[]) => {
+    if (!barcodes || barcodes.length === 0) return;
+    const text = barcodes[0]?.rawValue;
+    if (!text) return;
+    processResult(text);
+  }, [processResult]);
+
+  /** Manual scan: grab video frame and decode with BarcodeDetector */
+  const handleManualScan = useCallback(async () => {
+    if (manualScanning) return;
+    setManualScanning(true);
+
+    // Flash effect
+    setIsFlashing(true);
+    setTimeout(() => setIsFlashing(false), 200);
+
+    try {
+      const container = scannerContainerRef.current;
+      if (!container) throw new Error('no-container');
+
+      const video = container.querySelector('video');
+      if (!video || video.readyState < 2) throw new Error('no-video');
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('no-ctx');
+      ctx.drawImage(video, 0, 0);
+
+      // Try native BarcodeDetector first, then polyfill
+      let BarcodeDetectorClass: any = null;
+      if ('BarcodeDetector' in globalThis) {
+        BarcodeDetectorClass = (globalThis as any).BarcodeDetector;
+      } else {
+        try {
+          const mod = await import('barcode-detector');
+          BarcodeDetectorClass = mod.BarcodeDetector;
+        } catch {
+          // fallback
+        }
+      }
+
+      if (!BarcodeDetectorClass) throw new Error('no-detector');
+
+      const detector = new BarcodeDetectorClass({ formats: [...ALL_FORMATS] });
+      const results = await detector.detect(canvas);
+
+      if (results && results.length > 0 && results[0].rawValue) {
+        processResult(results[0].rawValue);
+      } else {
+        // Nothing found feedback
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([50, 30, 50]);
+        }
+      }
+    } catch (err) {
+      console.warn('Manual scan failed:', err);
+    } finally {
+      setManualScanning(false);
     }
-  }, []);
+  }, [manualScanning, processResult]);
 
   if (!open) return null;
 
@@ -97,7 +165,7 @@ export function CameraScannerDialog({
     <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center animate-in fade-in duration-200">
       {/* Top Controls */}
       <div className="absolute top-6 left-6 right-6 flex items-center justify-between z-10">
-        <button 
+        <button
           onClick={onClose}
           className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white hover:bg-white/20 hover:scale-105 active:scale-95 transition-all"
         >
@@ -111,80 +179,97 @@ export function CameraScannerDialog({
         )}
       </div>
 
-      <div className="w-full max-w-md p-6 flex flex-col items-center">
-        <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center text-primary mb-6 shadow-xl shadow-primary/20">
-          <Camera className="w-8 h-8" />
+      <div className="w-full max-w-3xl px-4 flex flex-col items-center h-[90vh] justify-center">
+        <div className="text-center mb-4">
+          <h2 className="text-2xl font-black text-white tracking-tight">مسح الباركود</h2>
+          <p className="text-white/40 text-xs font-bold">
+            {continuous
+              ? "وضع الإدخال المستمر نشط."
+              : "وجّه الكاميرا أو اضغط الزر للالتقاط."}
+          </p>
         </div>
-        
-        <h2 className="text-2xl font-black text-white mb-2 tracking-tight">مسح الباركود</h2>
-        <p className="text-white/40 text-sm font-bold mb-8 text-center max-w-[250px]">
-          {continuous 
-            ? "الماسح في وضع الإدخال المستمر. يمكنك مسح عدة قطع تتابعاً."
-            : "وجّه الكاميرا نحو الباركود، وسيتم القراءة تلقائياً."}
-        </p>
 
-        <div className="w-full aspect-square relative rounded-[3rem] overflow-hidden bg-black/50 border-2 border-white/10 shadow-2xl group">
+        <div ref={scannerContainerRef} className="w-full aspect-[4/3] md:aspect-video relative rounded-[2rem] overflow-hidden bg-black border-2 border-white/5 shadow-2xl">
           {error ? (
-            <div className="absolute inset-0 flex flex-col gap-3 items-center justify-center p-6 text-center text-red-400 font-bold bg-red-500/10">
+            <div className="absolute inset-0 flex flex-col gap-3 items-center justify-center p-6 text-center text-red-400 font-bold bg-red-500/10 z-20">
               <AlertCircle className="w-10 h-10" />
               <p className="max-w-[200px] leading-relaxed">{error}</p>
             </div>
           ) : (
-            <Scanner
-              onScan={handleScan}
-              onError={handleError}
-              allowMultiple={true}
-              scanDelay={350} // Optimized for mobile CPU/Battery (approx 3 frames/sec)
-              constraints={{
+            <BarcodeScanner
+              onCapture={handleCapture}
+              onError={(err: unknown) => {
+                console.error("Camera Error:", err);
+                const msg = err instanceof Error ? err.message : String(err);
+                if (msg.includes('Permission') || msg.includes('NotAllowedError')) {
+                  setError("لم يتم السماح بالوصول للكاميرا.");
+                } else if (msg.includes('NotFoundError')) {
+                  setError("لم يتم العثور على كاميرا.");
+                } else {
+                  setError("تعذر تشغيل الكاميرا.");
+                }
+              }}
+              options={scanOptions}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              trackConstraints={{
                 facingMode: 'environment',
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
-              }}
-              components={{
-                finder: false,
-                torch: true, // Enable flashlight support
-                zoom: true   // Enable zoom support
-              }}
-              sound={false} // Use the correct prop for disabling library sound
-              styles={{
-                container: { width: '100%', height: '100%' },
-                video: { objectFit: 'cover' }
+                advanced: [{ focusMode: 'continuous' } as any]
               }}
             />
           )}
 
+          {/* Shutter Flash Effect */}
+          {isFlashing && (
+            <div className="absolute inset-0 bg-white/40 z-30 pointer-events-none animate-out fade-out duration-200" />
+          )}
+
           {/* Scanned Feedback Overlay */}
           {lastScanned && (
-            <div className="absolute bottom-6 inset-x-6 z-20 animate-in fade-in slide-in-from-bottom-4">
-              <div className="bg-emerald-500/20 backdrop-blur-2xl border border-emerald-500/30 rounded-2xl p-4 flex flex-col items-center shadow-2xl">
-                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-1">Scanned Successfully</span>
+            <div className="absolute bottom-24 inset-x-6 z-20 animate-in fade-in slide-in-from-bottom-4">
+              <div className="bg-emerald-500/40 backdrop-blur-3xl border border-emerald-500/50 rounded-2xl p-3 flex flex-col items-center shadow-2xl">
+                <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-1">تم المسح</span>
                 <span className="text-white font-mono text-sm font-bold truncate w-full text-center" dir="ltr">{lastScanned}</span>
               </div>
             </div>
           )}
-          
-          {/* Scanning Animation overlay */}
+
+          {/* Scanning Animation */}
           {!error && (
-            <>
-              <div 
-                className="absolute inset-x-12 h-[1px] bg-primary/60 shadow-[0_0_20px_2px_rgba(59,130,246,0.8)] rounded-full z-10"
-                style={{
-                  top: '50%',
-                  animation: 'scanner 3s ease-in-out infinite alternate',
-                }} 
-              />
-              <style dangerouslySetInnerHTML={{__html:`
-                @keyframes scanner {
-                  0% { transform: translateY(-120px); opacity: 0.3; }
-                  50% { opacity: 1; }
-                  100% { transform: translateY(120px); opacity: 0.3; }
-                }
-              `}} />
-            </>
+            <div
+              className="absolute inset-x-0 h-[2px] bg-primary/40 shadow-[0_0_15px_2px_rgba(59,130,246,0.5)] z-10 pointer-events-none"
+              style={{
+                top: '50%',
+                animation: 'scanner 4s ease-in-out infinite alternate',
+              }}
+            />
+          )}
+
+          {/* Manual Capture Button — INSIDE scanner area */}
+          {!error && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2">
+              <button
+                onClick={handleManualScan}
+                disabled={manualScanning}
+                className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md border-4 border-white/20 hover:border-primary hover:bg-primary/20 hover:scale-110 active:scale-90 transition-all flex items-center justify-center shadow-2xl group/btn disabled:opacity-50"
+                aria-label="التقاط"
+              >
+                <div className="w-10 h-10 rounded-full bg-white/40 group-hover/btn:bg-primary/60 flex items-center justify-center transition-all">
+                  <Crosshair className="w-5 h-5 text-white" />
+                </div>
+              </button>
+              <p className="text-white/60 text-[9px] font-black uppercase tracking-widest bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">اضغط للمسح</p>
+            </div>
           )}
         </div>
       </div>
+
+      <style jsx global>{`
+        @keyframes scanner {
+          0% { transform: translateY(-150px); opacity: 0.1; }
+          50% { opacity: 0.8; }
+          100% { transform: translateY(150px); opacity: 0.1; }
+        }
+      `}</style>
     </div>
   );
 }
-
